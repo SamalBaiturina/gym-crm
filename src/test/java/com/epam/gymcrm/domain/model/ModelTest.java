@@ -4,99 +4,81 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModelTest {
 
     @Test
-    void equals_isBasedOnId() {
-        Trainee a = new Trainee();
-        a.setId(1L);
-        Trainee b = new Trainee();
-        b.setId(1L);
-        Trainee c = new Trainee();
-        c.setId(2L);
+    void userOfHasNoCredentials() {
+        User user = User.of("John", "Smith");
 
-        assertEquals(a, a);
-        assertEquals(a, b);
-        assertEquals(a.hashCode(), b.hashCode());
-        assertNotEquals(a, c);
-        assertNotEquals(a, null);
+        assertEquals("John", user.firstName());
+        assertEquals("Smith", user.lastName());
+        assertNull(user.username());
+        assertNull(user.password());
+        assertFalse(user.isActive());
     }
 
     @Test
-    void equals_differentClassesWithSameId_areNotEqual() {
-        Trainee trainee = new Trainee();
-        trainee.setId(1L);
-        Trainer trainer = new Trainer();
-        trainer.setId(1L);
+    void withCredentialsReturnsActiveCopy() {
+        User user = User.of("John", "Smith").withCredentials("John.Smith", "secret");
 
-        assertNotEquals(trainee, trainer);
+        assertEquals("John.Smith", user.username());
+        assertEquals("secret", user.password());
+        assertTrue(user.isActive());
     }
 
     @Test
-    void traineeToString_hidesPassword() {
-        Trainee trainee = new Trainee();
-        trainee.setId(1L);
-        trainee.setFirstName("John");
-        trainee.setLastName("Smith");
-        trainee.setUsername("John.Smith");
-        trainee.setPassword("secret12345");
-        trainee.setActive(true);
-        trainee.setDateOfBirth(LocalDate.of(1990, 5, 15));
-        trainee.setAddress("Astana");
+    void userToStringHidesPassword() {
+        User user = User.of("John", "Smith").withCredentials("John.Smith", "secret");
 
-        String text = trainee.toString();
-
-        assertTrue(text.contains("John.Smith"));
-        assertTrue(text.contains("Astana"));
-        assertFalse(text.contains("secret12345"));
+        assertFalse(user.toString().contains("secret"));
+        assertTrue(user.toString().contains("John.Smith"));
     }
 
     @Test
-    void trainerToString_hidesPassword() {
-        Trainer trainer = new Trainer();
-        trainer.setUsername("Anna.Brown");
-        trainer.setPassword("secret12345");
-        trainer.setSpecialization(new TrainingType("YOGA"));
+    void traineeWithIdAndWithUserKeepOtherFields() {
+        Trainee trainee = new Trainee(null, User.of("John", "Smith"), LocalDate.of(2000, 1, 1), "Astana");
 
-        String text = trainer.toString();
+        Trainee withId = trainee.withId(5L);
+        Trainee withUser = withId.withUser(User.of("Jane", "Doe"));
 
-        assertTrue(text.contains("YOGA"));
-        assertFalse(text.contains("secret12345"));
+        assertNull(trainee.id());
+        assertEquals(5L, withId.id());
+        assertEquals("Astana", withId.address());
+        assertEquals("Jane", withUser.user().firstName());
+        assertEquals(5L, withUser.id());
+        assertEquals(LocalDate.of(2000, 1, 1), withUser.dateOfBirth());
     }
 
     @Test
-    void trainingGettersAndToString() {
-        Training training = new Training();
-        training.setId(5L);
-        training.setTraineeId(1L);
-        training.setTrainerId(2L);
-        training.setTrainingName("Yoga");
-        training.setTrainingType(new TrainingType("YOGA"));
-        training.setTrainingDate(LocalDate.of(2026, 9, 1));
-        training.setTrainingDuration(60);
+    void trainerWithIdAndWithUserKeepOtherFields() {
+        Trainer trainer = new Trainer(null, User.of("Anna", "Brown"), new TrainingType("YOGA"));
 
-        assertEquals(1L, training.getTraineeId());
-        assertEquals(2L, training.getTrainerId());
-        assertEquals("Yoga", training.getTrainingName());
-        assertEquals(new TrainingType("YOGA"), training.getTrainingType());
-        assertEquals(LocalDate.of(2026, 9, 1), training.getTrainingDate());
-        assertEquals(60, training.getTrainingDuration());
-        assertTrue(training.toString().contains("id=5"));
+        Trainer withId = trainer.withId(3L);
+        Trainer withUser = withId.withUser(User.of("Eva", "Green"));
+
+        assertEquals(3L, withId.id());
+        assertEquals(new TrainingType("YOGA"), withId.specialization());
+        assertEquals("Eva", withUser.user().firstName());
+        assertEquals(3L, withUser.id());
     }
 
     @Test
-    void trainingType_equalsAndHashCodeAreBasedOnName() {
-        TrainingType a = new TrainingType("Yoga");
-        TrainingType b = new TrainingType("Yoga");
-        TrainingType c = new TrainingType("Zumba");
+    void trainingWithIdKeepsOtherFields() {
+        Training training = new Training(null, 1L, 2L, "Morning", new TrainingType("YOGA"),
+                LocalDate.of(2026, 9, 1), 60);
 
-        assertEquals("Yoga", a.getName());
-        assertEquals(a, b);
-        assertEquals(a.hashCode(), b.hashCode());
-        assertNotEquals(a, c);
-        assertNotEquals(a, null);
-        assertTrue(a.toString().contains("Yoga"));
+        Training withId = training.withId(7L);
+
+        assertEquals(7L, withId.id());
+        assertEquals(1L, withId.traineeId());
+        assertEquals(2L, withId.trainerId());
+        assertEquals("Morning", withId.trainingName());
+        assertEquals(60, withId.trainingDuration());
+        assertEquals(LocalDate.of(2026, 9, 1), withId.trainingDate());
     }
 }

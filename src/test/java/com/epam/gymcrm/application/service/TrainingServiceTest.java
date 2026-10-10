@@ -6,19 +6,25 @@ import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
+import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.domain.model.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TrainingServiceTest {
@@ -29,22 +35,33 @@ class TrainingServiceTest {
     private TraineeDao traineeDao;
     @Mock
     private TrainerDao trainerDao;
-    @InjectMocks
+
     private TrainingService service;
 
-    @Test
-    void create_savesTraining_whenTraineeAndTrainerExist() {
-        Training training = training(1L, 2L);
-        when(traineeDao.findById(1L)).thenReturn(Optional.of(new Trainee()));
-        when(trainerDao.findById(2L)).thenReturn(Optional.of(new Trainer()));
-        when(trainingDao.save(training)).thenReturn(training);
+    private final Training training = new Training(null, 1L, 2L, "Morning", new TrainingType("YOGA"),
+            LocalDate.of(2026, 9, 1), 60);
 
-        assertSame(training, service.create(training));
+    @BeforeEach
+    void setUp() {
+        service = new TrainingService();
+        service.setTrainingDao(trainingDao);
+        service.setTraineeDao(traineeDao);
+        service.setTrainerDao(trainerDao);
     }
 
     @Test
-    void create_throws_whenTraineeMissing() {
-        Training training = training(1L, 2L);
+    void createSavesWhenTraineeAndTrainerExist() {
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(
+                new Trainee(1L, User.of("John", "Smith"), null, null)));
+        when(trainerDao.findById(2L)).thenReturn(Optional.of(
+                new Trainer(2L, User.of("Anna", "Brown"), new TrainingType("YOGA"))));
+        when(trainingDao.save(training)).thenReturn(training.withId(1L));
+
+        assertEquals(1L, service.create(training).id());
+    }
+
+    @Test
+    void createThrowsWhenTraineeMissing() {
         when(traineeDao.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () -> service.create(training));
@@ -52,9 +69,9 @@ class TrainingServiceTest {
     }
 
     @Test
-    void create_throws_whenTrainerMissing() {
-        Training training = training(1L, 2L);
-        when(traineeDao.findById(1L)).thenReturn(Optional.of(new Trainee()));
+    void createThrowsWhenTrainerMissing() {
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(
+                new Trainee(1L, User.of("John", "Smith"), null, null)));
         when(trainerDao.findById(2L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () -> service.create(training));
@@ -62,19 +79,11 @@ class TrainingServiceTest {
     }
 
     @Test
-    void findById_andFindAll_delegateToDao() {
-        Training training = new Training();
-        when(trainingDao.findById(1L)).thenReturn(Optional.of(training));
-        when(trainingDao.findAll()).thenReturn(List.of(training));
+    void findByIdAndFindAllDelegateToDao() {
+        when(trainingDao.findById(1L)).thenReturn(Optional.of(training.withId(1L)));
+        when(trainingDao.findAll()).thenReturn(List.of(training.withId(1L)));
 
-        assertEquals(Optional.of(training), service.findById(1L));
-        assertEquals(List.of(training), service.findAll());
-    }
-
-    private Training training(Long traineeId, Long trainerId) {
-        Training training = new Training();
-        training.setTraineeId(traineeId);
-        training.setTrainerId(trainerId);
-        return training;
+        assertEquals(Optional.of(training.withId(1L)), service.findById(1L));
+        assertEquals(1, service.findAll().size());
     }
 }

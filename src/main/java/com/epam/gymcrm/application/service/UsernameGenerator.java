@@ -31,9 +31,8 @@ public class UsernameGenerator {
     public String generate(String firstName, String lastName) {
         String base = firstName + "." + lastName;
 
-        Set<String> taken = new HashSet<>();
-        traineeDao.findAll().forEach(t -> taken.add(t.getUsername()));
-        trainerDao.findAll().forEach(t -> taken.add(t.getUsername()));
+        Set<String> taken = new HashSet<>(traineeDao.findUsernamesStartingWith(base));
+        taken.addAll(trainerDao.findUsernamesStartingWith(base));
 
         String username = base;
         int serial = 0;

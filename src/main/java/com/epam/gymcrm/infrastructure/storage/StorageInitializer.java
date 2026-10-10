@@ -1,6 +1,6 @@
 package com.epam.gymcrm.infrastructure.storage;
 
-import com.epam.gymcrm.domain.model.BaseEntity;
+import com.epam.gymcrm.domain.model.Identifiable;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
@@ -8,8 +8,8 @@ import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -41,16 +41,20 @@ public class StorageInitializer implements BeanPostProcessor {
             case "traineeStorage" -> fill((Map<Long, Trainee>) bean, "TRAINEE", this::parseTrainee);
             case "trainerStorage" -> fill((Map<Long, Trainer>) bean, "TRAINER", this::parseTrainer);
             case "trainingStorage" -> fill((Map<Long, Training>) bean, "TRAINING", this::parseTraining);
-            default -> { }
+            default -> {
+                // not a storage bean
+            }
         }
         return bean;
     }
 
-    private <T extends BaseEntity> void fill(Map<Long, T> storage, String type,
-                                             Function<String[], T> parser) {
-        List<String[]> rows = readRows(type);
-        rows.stream().map(parser).forEach(e -> storage.put(e.getId(), e));
-        log.info("Initialized {} storage with {} records", type, rows.size());
+    private <T extends Identifiable<T>> void fill(Map<Long, T> storage, String type,
+                                                  Function<String[], T> parser) {
+        for (String[] parts : readRows(type)) {
+            T model = parser.apply(parts);
+            storage.put(model.id(), model);
+        }
+        log.info("Loaded {} {} record(s) from {}", storage.size(), type, initFile);
     }
 
     private List<String[]> readRows(String type) {
@@ -68,39 +72,20 @@ public class StorageInitializer implements BeanPostProcessor {
         }
     }
 
+    private User parseUser(String[] p) {
+        return new User(p[2], p[3], p[4], p[5], Boolean.parseBoolean(p[6]));
+    }
+
     private Trainee parseTrainee(String[] p) {
-        Trainee trainee = new Trainee();
-        fillUser(trainee, p);
-        trainee.setDateOfBirth(LocalDate.parse(p[7]));
-        trainee.setAddress(p[8]);
-        return trainee;
+        return new Trainee(Long.valueOf(p[1]), parseUser(p), LocalDate.parse(p[7]), p[8]);
     }
 
     private Trainer parseTrainer(String[] p) {
-        Trainer trainer = new Trainer();
-        fillUser(trainer, p);
-        trainer.setSpecialization(new TrainingType(p[7]));
-        return trainer;
+        return new Trainer(Long.valueOf(p[1]), parseUser(p), new TrainingType(p[7]));
     }
 
     private Training parseTraining(String[] p) {
-        Training training = new Training();
-        training.setId(Long.parseLong(p[1]));
-        training.setTraineeId(Long.parseLong(p[2]));
-        training.setTrainerId(Long.parseLong(p[3]));
-        training.setTrainingName(p[4]);
-        training.setTrainingType(new TrainingType(p[5]));
-        training.setTrainingDate(LocalDate.parse(p[6]));
-        training.setTrainingDuration(Integer.parseInt(p[7]));
-        return training;
-    }
-
-    private void fillUser(User user, String[] p) {
-        user.setId(Long.parseLong(p[1]));
-        user.setFirstName(p[2]);
-        user.setLastName(p[3]);
-        user.setUsername(p[4]);
-        user.setPassword(p[5]);
-        user.setActive(Boolean.parseBoolean(p[6]));
+        return new Training(Long.valueOf(p[1]), Long.valueOf(p[2]), Long.valueOf(p[3]), p[4],
+                new TrainingType(p[5]), LocalDate.parse(p[6]), Integer.parseInt(p[7]));
     }
 }

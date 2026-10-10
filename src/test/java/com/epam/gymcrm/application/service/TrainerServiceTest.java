@@ -2,9 +2,12 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.domain.model.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -12,9 +15,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TrainerServiceTest {
@@ -25,53 +31,60 @@ class TrainerServiceTest {
     private UsernameGenerator usernameGenerator;
     @Mock
     private PasswordGenerator passwordGenerator;
-    @InjectMocks
+
     private TrainerService service;
 
-    @Test
-    void create_setsGeneratedCredentialsAndActivates() {
-        Trainer trainer = new Trainer();
-        trainer.setFirstName("Anna");
-        trainer.setLastName("Brown");
-        when(usernameGenerator.generate("Anna", "Brown")).thenReturn("Anna.Brown");
-        when(passwordGenerator.generate()).thenReturn("abcdefghij");
-        when(trainerDao.save(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        Trainer result = service.create(trainer);
-
-        assertEquals("Anna.Brown", result.getUsername());
-        assertEquals("abcdefghij", result.getPassword());
-        assertTrue(result.isActive());
+    @BeforeEach
+    void setUp() {
+        service = new TrainerService();
+        service.setTrainerDao(trainerDao);
+        service.setUsernameGenerator(usernameGenerator);
+        service.setPasswordGenerator(passwordGenerator);
     }
 
     @Test
-    void update_savesTrainer_whenExists() {
-        Trainer trainer = new Trainer();
-        trainer.setId(1L);
+    void createSetsGeneratedCredentials() {
+        when(usernameGenerator.generate("Anna", "Brown")).thenReturn("Anna.Brown");
+        when(passwordGenerator.generate()).thenReturn("trainer1234");
+        when(trainerDao.save(any(Trainer.class))).thenAnswer(inv -> ((Trainer) inv.getArgument(0)).withId(1L));
+
+        Trainer result = service.create(new Trainer(null, User.of("Anna", "Brown"), new TrainingType("YOGA")));
+
+        ArgumentCaptor<Trainer> captor = ArgumentCaptor.forClass(Trainer.class);
+        verify(trainerDao).save(captor.capture());
+        assertEquals("Anna.Brown", captor.getValue().user().username());
+        assertEquals("trainer1234", captor.getValue().user().password());
+        assertEquals(1L, result.id());
+    }
+
+    @Test
+    void updateSavesExistingTrainer() {
+        Trainer trainer = new Trainer(1L, User.of("Anna", "Brown"), new TrainingType("YOGA"));
         when(trainerDao.findById(1L)).thenReturn(Optional.of(trainer));
         when(trainerDao.save(trainer)).thenReturn(trainer);
 
-        assertSame(trainer, service.update(trainer));
+        assertEquals(trainer, service.update(trainer));
     }
 
     @Test
-    void update_throws_whenTrainerNotFound() {
-        Trainer trainer = new Trainer();
-        trainer.setId(99L);
-        when(trainerDao.findById(99L)).thenReturn(Optional.empty());
+    void updateThrowsWhenNotFound() {
+        Trainer trainer = new Trainer(1L, User.of("Anna", "Brown"), new TrainingType("YOGA"));
+        when(trainerDao.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () -> service.update(trainer));
         verify(trainerDao, never()).save(any());
     }
 
     @Test
-    void update_throws_whenIdIsNull() {
-        assertThrows(NoSuchElementException.class, () -> service.update(new Trainer()));
+    void updateThrowsWhenIdIsNull() {
+        Trainer trainer = new Trainer(null, User.of("Anna", "Brown"), new TrainingType("YOGA"));
+
+        assertThrows(NoSuchElementException.class, () -> service.update(trainer));
     }
 
     @Test
-    void findById_andFindAll_delegateToDao() {
-        Trainer trainer = new Trainer();
+    void findByIdAndFindAllDelegateToDao() {
+        Trainer trainer = new Trainer(1L, User.of("Anna", "Brown"), new TrainingType("YOGA"));
         when(trainerDao.findById(1L)).thenReturn(Optional.of(trainer));
         when(trainerDao.findAll()).thenReturn(List.of(trainer));
 

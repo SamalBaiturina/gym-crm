@@ -2,6 +2,7 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.domain.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,21 +37,21 @@ public class TraineeService {
     }
 
     public Trainee create(Trainee trainee) {
-        trainee.setUsername(usernameGenerator.generate(trainee.getFirstName(), trainee.getLastName()));
-        trainee.setPassword(passwordGenerator.generate());
-        trainee.setActive(true);
-        Trainee saved = traineeDao.save(trainee);
-        log.info("Created trainee id={}, username={}", saved.getId(), saved.getUsername());
+        User user = trainee.user();
+        String username = usernameGenerator.generate(user.firstName(), user.lastName());
+        String password = passwordGenerator.generate();
+        Trainee saved = traineeDao.save(trainee.withUser(user.withCredentials(username, password)));
+        log.info("Created trainee id={}, username={}", saved.id(), username);
         return saved;
     }
 
     public Trainee update(Trainee trainee) {
-        if (trainee.getId() == null || traineeDao.findById(trainee.getId()).isEmpty()) {
-            log.warn("Trainee update failed, not found: id={}", trainee.getId());
-            throw new NoSuchElementException("Trainee not found: " + trainee.getId());
+        if (trainee.id() == null || traineeDao.findById(trainee.id()).isEmpty()) {
+            log.warn("Trainee not found for update, id={}", trainee.id());
+            throw new NoSuchElementException("Trainee not found: " + trainee.id());
         }
         Trainee saved = traineeDao.save(trainee);
-        log.info("Updated trainee id={}", saved.getId());
+        log.info("Updated trainee id={}", saved.id());
         return saved;
     }
 

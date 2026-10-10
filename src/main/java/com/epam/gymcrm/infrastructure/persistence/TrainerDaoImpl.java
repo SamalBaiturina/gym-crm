@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -19,5 +20,10 @@ public class TrainerDaoImpl extends AbstractMapDao<Trainer> implements TrainerDa
     @Autowired
     public void setStorage(@Qualifier("trainerStorage") Map<Long, Trainer> storage) {
         super.setStorage(storage);
+    }
+
+    @Override
+    public List<String> findUsernamesStartingWith(String prefix) {
+        return usernamesStartingWith(t -> t.user().username(), prefix);
     }
 }

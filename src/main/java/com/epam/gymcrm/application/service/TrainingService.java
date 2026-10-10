@@ -38,17 +38,16 @@ public class TrainingService {
     }
 
     public Training create(Training training) {
-        if (traineeDao.findById(training.getTraineeId()).isEmpty()) {
-            log.warn("Training creation failed, trainee not found: id={}", training.getTraineeId());
-            throw new NoSuchElementException("Trainee not found: " + training.getTraineeId());
+        if (traineeDao.findById(training.traineeId()).isEmpty()) {
+            log.warn("Trainee not found, id={}", training.traineeId());
+            throw new NoSuchElementException("Trainee not found: " + training.traineeId());
         }
-        if (trainerDao.findById(training.getTrainerId()).isEmpty()) {
-            log.warn("Training creation failed, trainer not found: id={}", training.getTrainerId());
-            throw new NoSuchElementException("Trainer not found: " + training.getTrainerId());
+        if (trainerDao.findById(training.trainerId()).isEmpty()) {
+            log.warn("Trainer not found, id={}", training.trainerId());
+            throw new NoSuchElementException("Trainer not found: " + training.trainerId());
         }
         Training saved = trainingDao.save(training);
-        log.info("Created training id={}, traineeId={}, trainerId={}",
-                saved.getId(), saved.getTraineeId(), saved.getTrainerId());
+        log.info("Created training id={}", saved.id());
         return saved;
     }
 

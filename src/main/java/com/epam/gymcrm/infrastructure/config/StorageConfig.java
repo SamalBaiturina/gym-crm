@@ -18,7 +18,9 @@ public class StorageConfig {
     }
 
     @Bean
-    public Map<Long, Trainer> trainerStorage() { return new ConcurrentHashMap<>(); }
+    public Map<Long, Trainer> trainerStorage() {
+        return new ConcurrentHashMap<>();
+    }
 
     @Bean
     public Map<Long, Training> trainingStorage() {

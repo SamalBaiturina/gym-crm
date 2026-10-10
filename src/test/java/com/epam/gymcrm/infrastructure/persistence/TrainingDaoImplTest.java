@@ -1,14 +1,15 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
 import com.epam.gymcrm.domain.model.Training;
-import com.epam.gymcrm.infrastructure.persistence.TrainingDaoImpl;
+import com.epam.gymcrm.domain.model.TrainingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrainingDaoImplTest {
 
@@ -21,18 +22,13 @@ class TrainingDaoImplTest {
     }
 
     @Test
-    void save_assignsId_andFindByIdReturnsIt() {
-        Training saved = dao.save(new Training());
+    void saveAndFind() {
+        Training saved = dao.save(new Training(null, 1L, 1L, "Morning", new TrainingType("YOGA"),
+                LocalDate.of(2026, 9, 1), 60));
 
-        assertEquals(1L, saved.getId());
-        assertEquals(Optional.of(saved), dao.findById(1L));
-    }
-
-    @Test
-    void findAll_returnsAllSaved() {
-        dao.save(new Training());
-        dao.save(new Training());
-
-        assertEquals(2, dao.findAll().size());
+        assertEquals(1L, saved.id());
+        assertEquals(saved, dao.findById(1L).orElseThrow());
+        assertTrue(dao.findById(2L).isEmpty());
+        assertEquals(1, dao.findAll().size());
     }
 }

@@ -1,20 +1,14 @@
 package com.epam.gymcrm.domain.model;
 
-public class Trainer extends User {
-    private TrainingType specialization;
-
-    public void setSpecialization(TrainingType specialization) {
-        this.specialization = specialization;
-    }
-
-    public TrainingType getSpecialization() {
-        return specialization;
-    }
+public record Trainer(Long id, User user, TrainingType specialization)
+        implements Identifiable<Trainer> {
 
     @Override
-    public String toString() {
-        return "Trainer{" + super.toString() +
-                ", specialization=" + specialization +
-                '}';
+    public Trainer withId(Long id) {
+        return new Trainer(id, user, specialization);
+    }
+
+    public Trainer withUser(User user) {
+        return new Trainer(id, user, specialization);
     }
 }

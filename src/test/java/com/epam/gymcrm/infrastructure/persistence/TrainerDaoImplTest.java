@@ -1,14 +1,15 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
 import com.epam.gymcrm.domain.model.Trainer;
-import com.epam.gymcrm.infrastructure.persistence.TrainerDaoImpl;
+import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrainerDaoImplTest {
 
@@ -20,19 +21,26 @@ class TrainerDaoImplTest {
         dao.setStorage(new HashMap<>());
     }
 
-    @Test
-    void save_assignsId_andFindByIdReturnsIt() {
-        Trainer saved = dao.save(new Trainer());
-
-        assertEquals(1L, saved.getId());
-        assertEquals(Optional.of(saved), dao.findById(1L));
+    private Trainer trainer(String username) {
+        return new Trainer(null, User.of("Anna", "Brown").withCredentials(username, "pwd"),
+                new TrainingType("YOGA"));
     }
 
     @Test
-    void findAll_returnsAllSaved() {
-        dao.save(new Trainer());
-        dao.save(new Trainer());
+    void saveAndFind() {
+        Trainer saved = dao.save(trainer("Anna.Brown"));
 
-        assertEquals(2, dao.findAll().size());
+        assertEquals(1L, saved.id());
+        assertEquals(saved, dao.findById(1L).orElseThrow());
+        assertEquals(1, dao.findAll().size());
+    }
+
+    @Test
+    void findUsernamesStartingWith() {
+        dao.save(trainer("Anna.Brown"));
+        dao.save(trainer("Max.Miller"));
+
+        assertEquals(1, dao.findUsernamesStartingWith("Anna.Brown").size());
+        assertTrue(dao.findUsernamesStartingWith("Nobody").isEmpty());
     }
 }

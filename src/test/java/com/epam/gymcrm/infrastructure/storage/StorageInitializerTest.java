@@ -4,71 +4,73 @@ import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
 import com.epam.gymcrm.domain.model.TrainingType;
-import com.epam.gymcrm.infrastructure.storage.StorageInitializer;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StorageInitializerTest {
 
-    private StorageInitializer initializer;
-
-    @BeforeEach
-    void setUp() {
-        initializer = new StorageInitializer();
-        initializer.setInitFile("data/test-init-data.csv");
+    private StorageInitializer initializer(String file) {
+        StorageInitializer initializer = new StorageInitializer();
+        initializer.setInitFile(file);
+        return initializer;
     }
 
     @Test
-    void fillsTraineeStorage() {
+    void loadsTrainees() {
         Map<Long, Trainee> storage = new HashMap<>();
 
-        initializer.postProcessAfterInitialization(storage, "traineeStorage");
+        initializer("data/test-init-data.csv").postProcessAfterInitialization(storage, "traineeStorage");
 
-        assertEquals(1, storage.size());
         Trainee trainee = storage.get(1L);
-        assertEquals("John.Smith", trainee.getUsername());
-        assertEquals(LocalDate.of(1990, 5, 15), trainee.getDateOfBirth());
-        assertEquals("Astana Abay 1", trainee.getAddress());
+        assertEquals("John.Smith", trainee.user().username());
+        assertEquals(LocalDate.of(1990, 5, 15), trainee.dateOfBirth());
+        assertEquals("Astana Abay 1", trainee.address());
     }
 
     @Test
-    void fillsTrainerStorage() {
+    void loadsTrainers() {
         Map<Long, Trainer> storage = new HashMap<>();
 
-        initializer.postProcessAfterInitialization(storage, "trainerStorage");
+        initializer("data/test-init-data.csv").postProcessAfterInitialization(storage, "trainerStorage");
 
-        assertEquals(new TrainingType("YOGA"), storage.get(1L).getSpecialization());
+        assertEquals("Anna.Brown", storage.get(1L).user().username());
+        assertEquals(new TrainingType("YOGA"), storage.get(1L).specialization());
     }
 
     @Test
-    void fillsTrainingStorage() {
+    void loadsTrainings() {
         Map<Long, Training> storage = new HashMap<>();
 
-        initializer.postProcessAfterInitialization(storage, "trainingStorage");
+        initializer("data/test-init-data.csv").postProcessAfterInitialization(storage, "trainingStorage");
 
         Training training = storage.get(1L);
-        assertEquals("Morning yoga", training.getTrainingName());
-        assertEquals(60, training.getTrainingDuration());
+        assertEquals("Morning yoga", training.trainingName());
+        assertEquals(new TrainingType("YOGA"), training.trainingType());
+        assertEquals(60, training.trainingDuration());
     }
 
     @Test
     void ignoresOtherBeans() {
         Object bean = new Object();
 
-        assertSame(bean, initializer.postProcessAfterInitialization(bean, "someOtherBean"));
+        assertSame(bean, initializer("data/test-init-data.csv").postProcessAfterInitialization(bean, "other"));
     }
 
     @Test
     void throwsWhenFileMissing() {
-        initializer.setInitFile("data/missing.csv");
+        Map<Long, Trainee> storage = new HashMap<>();
+        StorageInitializer initializer = initializer("data/missing.csv");
 
         assertThrows(IllegalStateException.class,
-                () -> initializer.postProcessAfterInitialization(new HashMap<Long, Trainee>(), "traineeStorage"));
+                () -> initializer.postProcessAfterInitialization(storage, "traineeStorage"));
+        assertTrue(storage.isEmpty());
     }
 }

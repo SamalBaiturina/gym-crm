@@ -21,16 +21,16 @@ Run the demo class `com.epam.gymcrm.Main` from the IDE. It starts the Spring con
 
 ## Project structure
 
-The project follows hexagonal (onion) architecture: all dependencies point toward the domain model.
+The project follows hexagonal (onion) architecture. Dependencies point toward the domain model.
 
 | Package | Purpose |
 |---|---|
-| `domain.model` | Domain model: `User`, `Trainee`, `Trainer`, `Training`, `TrainingType` |
-| `application.port.out` | Outgoing ports: DAO interfaces |
-| `application.service` | Services, username and password generators |
+| `domain.model` | Domain model: records `User`, `Trainee`, `Trainer`, `Training`, `TrainingType` and the `Identifiable` interface |
+| `application.port.out` | DAO interfaces (ports), including `UsernameLookup` |
+| `application.service` | `TraineeService`, `TrainerService`, `TrainingService`, username and password generators |
 | `infrastructure.persistence` | In-memory DAO implementations on top of maps |
-| `infrastructure.storage` | `StorageInitializer` that loads initial data |
-| `infrastructure.config` | Java-based Spring configuration |
+| `infrastructure.config` | Java-based Spring configuration (`AppConfig`, `StorageConfig`) |
+| `infrastructure.storage` | `StorageInitializer` (`BeanPostProcessor`) that loads initial data |
 | `infrastructure.facade` | `GymFacade`, single entry point to all services |
 
 ## How it works
@@ -38,7 +38,8 @@ The project follows hexagonal (onion) architecture: all dependencies point towar
 - Each entity type has its own storage: a separate `Map` bean (`traineeStorage`, `trainerStorage`, `trainingStorage`).
 - On startup `StorageInitializer` fills the storages from a CSV file. The path is set in `src/main/resources/application.properties` (`storage.init.file`).
 - DAOs are injected into services with `@Autowired` setters. Services are injected into `GymFacade` through the constructor.
-- Username is `FirstName.LastName`. If it is already taken by a trainee or a trainer, a serial number is added (`John.Smith1`, `John.Smith2`, ...).
+- Domain model classes are immutable Java records. Changes are made by creating a copy (`withId`, `withUser`, `withCredentials`).
+- Username is `FirstName.LastName`. To check that it is free, the DAO returns only usernames that start with this base (`findUsernamesStartingWith`). If it is already taken by a trainee or a trainer, a serial number is added (`John.Smith1`, `John.Smith2`, ...).
 - Password is a random 10-character string.
 - Passwords are never written to logs or `toString()` output.
 

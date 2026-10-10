@@ -14,10 +14,10 @@ public class PasswordGenerator {
     private final SecureRandom random = new SecureRandom();
 
     public String generate() {
-        StringBuilder password = new StringBuilder(LENGTH);
+        StringBuilder sb = new StringBuilder(LENGTH);
         for (int i = 0; i < LENGTH; i++) {
-            password.append(CHARS.charAt(random.nextInt(CHARS.length())));
+            sb.append(CHARS.charAt(random.nextInt(CHARS.length())));
         }
-        return password.toString();
+        return sb.toString();
     }
 }

@@ -1,11 +1,13 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
 import com.epam.gymcrm.domain.model.Trainee;
-import com.epam.gymcrm.infrastructure.persistence.TraineeDaoImpl;
+import com.epam.gymcrm.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,29 +19,55 @@ class TraineeDaoImplTest {
     @BeforeEach
     void setUp() {
         dao = new TraineeDaoImpl();
-        dao.setStorage(new HashMap<>());
+        Map<Long, Trainee> storage = new HashMap<>();
+        dao.setStorage(storage);
+    }
+
+    private Trainee trainee(Long id, String username) {
+        return new Trainee(id, User.of("John", "Smith").withCredentials(username, "pwd"), null, "Astana");
     }
 
     @Test
-    void save_assignsIncrementingIds() {
-        Trainee first = dao.save(new Trainee());
-        Trainee second = dao.save(new Trainee());
-
-        assertEquals(1L, first.getId());
-        assertEquals(2L, second.getId());
+    void saveAssignsIncrementingIds() {
+        assertEquals(1L, dao.save(trainee(null, "John.Smith")).id());
+        assertEquals(2L, dao.save(trainee(null, "John.Smith1")).id());
     }
 
     @Test
-    void findById_returnsEmpty_whenMissing() {
-        assertTrue(dao.findById(42L).isEmpty());
+    void saveKeepsExistingIdAndNextIdFollowsMax() {
+        dao.save(trainee(10L, "John.Smith"));
+
+        assertEquals(11L, dao.save(trainee(null, "John.Smith1")).id());
     }
 
     @Test
-    void deleteById_removesTrainee() {
-        Trainee saved = dao.save(new Trainee());
+    void findByIdAndFindAll() {
+        Trainee saved = dao.save(trainee(null, "John.Smith"));
 
-        dao.deleteById(saved.getId());
+        assertEquals(saved, dao.findById(saved.id()).orElseThrow());
+        assertTrue(dao.findById(99L).isEmpty());
+        assertEquals(1, dao.findAll().size());
+    }
 
-        assertTrue(dao.findById(saved.getId()).isEmpty());
+    @Test
+    void deleteByIdRemovesTrainee() {
+        Trainee saved = dao.save(trainee(null, "John.Smith"));
+
+        dao.deleteById(saved.id());
+
+        assertTrue(dao.findAll().isEmpty());
+    }
+
+    @Test
+    void findUsernamesStartingWithReturnsOnlyMatching() {
+        dao.save(trainee(null, "John.Smith"));
+        dao.save(trainee(null, "John.Smith1"));
+        dao.save(trainee(null, "Aigul.Nurova"));
+
+        List<String> result = dao.findUsernamesStartingWith("John.Smith");
+
+        assertEquals(2, result.size());
+        assertTrue(result.contains("John.Smith"));
+        assertTrue(result.contains("John.Smith1"));
     }
 }
