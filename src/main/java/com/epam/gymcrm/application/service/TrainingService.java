@@ -46,7 +46,7 @@ public class TrainingService {
         this.authenticationService = authenticationService;
     }
 
-    /** Operation 16: the authenticated trainer adds a training with the given trainee. */
+    /** The authenticated trainer adds a training with the given trainee. */
     @Transactional
     public Training addTraining(String trainerUsername, String trainerPassword, NewTraining request) {
         authenticationService.authenticateTrainer(trainerUsername, trainerPassword);
@@ -70,7 +70,7 @@ public class TrainingService {
         return saved;
     }
 
-    /** Operation 14: trainings of a trainee. Any filter except the credentials may be null. */
+    /** Trainings of the trainee; every filter except the credentials may be null. */
     @Transactional(readOnly = true)
     public List<Training> getTraineeTrainings(String username, String password, LocalDate from,
                                               LocalDate to, String trainerName, String trainingTypeName) {
@@ -78,7 +78,7 @@ public class TrainingService {
         return trainingDao.findForTrainee(username, from, to, trainerName, trainingTypeName);
     }
 
-    /** Operation 15: trainings of a trainer. Any filter except the credentials may be null. */
+    /** Trainings of the trainer; every filter except the credentials may be null. */
     @Transactional(readOnly = true)
     public List<Training> getTrainerTrainings(String username, String password, LocalDate from,
                                               LocalDate to, String traineeName) {

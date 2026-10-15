@@ -41,7 +41,7 @@ public class TrainerService {
         this.authenticationService = authenticationService;
     }
 
-    /** Operation 1: create a trainer profile. Username and password are generated. */
+    /** Creates a trainer profile; username and password are generated. */
     @Transactional
     public Trainer create(Trainer trainer) {
         Validation.requireNotNull(trainer, "trainer");
@@ -55,13 +55,11 @@ public class TrainerService {
         return saved;
     }
 
-    /** Operation 5: select a trainer profile by username. */
     @Transactional(readOnly = true)
     public Trainer getByUsername(String username, String password) {
         return authenticated(username, password);
     }
 
-    /** Operation 8: change the trainer's password. */
     @Transactional
     public void changePassword(String username, String oldPassword, String newPassword) {
         Trainer trainer = authenticated(username, oldPassword);
@@ -70,7 +68,7 @@ public class TrainerService {
         log.info("Password changed for trainer username={}", username);
     }
 
-    /** Operation 9: update a trainer profile (names, specialization). */
+    /** Updates names and specialization; username and password stay the same. */
     @Transactional
     public Trainer update(String username, String password, Trainer changes) {
         Trainer existing = authenticated(username, password);
@@ -83,7 +81,7 @@ public class TrainerService {
         return saved;
     }
 
-    /** Operation 12: activate/de-activate. Every call flips the flag (not idempotent). */
+    /** Flips the active flag on every call (not idempotent) and returns the new value. */
     @Transactional
     public boolean toggleActive(String username, String password) {
         Trainer trainer = authenticated(username, password);

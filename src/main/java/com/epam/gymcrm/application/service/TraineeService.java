@@ -53,7 +53,7 @@ public class TraineeService {
         this.authenticationService = authenticationService;
     }
 
-    /** Operation 2: create a trainee profile. Username and password are generated. */
+    /** Creates a trainee profile; username and password are generated. */
     @Transactional
     public Trainee create(Trainee trainee) {
         Validation.requireNotNull(trainee, "trainee");
@@ -66,13 +66,11 @@ public class TraineeService {
         return saved;
     }
 
-    /** Operation 6: select a trainee profile by username. */
     @Transactional(readOnly = true)
     public Trainee getByUsername(String username, String password) {
         return authenticated(username, password);
     }
 
-    /** Operation 7: change the trainee's password. */
     @Transactional
     public void changePassword(String username, String oldPassword, String newPassword) {
         Trainee trainee = authenticated(username, oldPassword);
@@ -81,7 +79,7 @@ public class TraineeService {
         log.info("Password changed for trainee username={}", username);
     }
 
-    /** Operation 10: update a trainee profile (names, date of birth, address). */
+    /** Updates names, date of birth and address; username and password stay the same. */
     @Transactional
     public Trainee update(String username, String password, Trainee changes) {
         Trainee existing = authenticated(username, password);
@@ -94,7 +92,7 @@ public class TraineeService {
         return saved;
     }
 
-    /** Operation 11: activate/de-activate. Every call flips the flag (not idempotent). */
+    /** Flips the active flag on every call (not idempotent) and returns the new value. */
     @Transactional
     public boolean toggleActive(String username, String password) {
         Trainee trainee = authenticated(username, password);
@@ -104,7 +102,7 @@ public class TraineeService {
         return active;
     }
 
-    /** Operation 13: delete the trainee; trainings are deleted by cascade. */
+    /** Deletes the trainee; trainings are deleted by cascade. */
     @Transactional
     public void delete(String username, String password) {
         Trainee trainee = authenticated(username, password);
@@ -112,14 +110,13 @@ public class TraineeService {
         log.info("Deleted trainee username={}", username);
     }
 
-    /** Operation 17: trainers that are not assigned to this trainee. */
     @Transactional(readOnly = true)
     public List<Trainer> getNotAssignedTrainers(String username, String password) {
         authenticationService.authenticateTrainee(username, password);
         return trainerDao.findNotAssignedTo(username);
     }
 
-    /** Operation 18: replace the trainee's trainers with the given ones. */
+    /** Replaces the trainee's trainers with the given ones. */
     @Transactional
     public List<Trainer> updateTrainers(String username, String password, List<String> trainerUsernames) {
         Trainee trainee = authenticated(username, password);
