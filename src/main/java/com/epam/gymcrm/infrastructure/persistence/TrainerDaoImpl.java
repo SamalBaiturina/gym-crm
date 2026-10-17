@@ -4,6 +4,7 @@ import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainingTypeEntity;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainerMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -21,28 +22,34 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
     private static final String SELECT_TRAINER =
             "select t from TrainerEntity t join fetch t.user u join fetch t.specialization ";
 
+    private final TrainerMapper trainerMapper;
+
+    public TrainerDaoImpl(TrainerMapper trainerMapper) {
+        this.trainerMapper = trainerMapper;
+    }
+
     @Override
     public Trainer save(Trainer trainer) {
         TrainingTypeEntity specialization = findTrainingType(trainer.specialization().name());
         if (trainer.id() == null) {
-            TrainerEntity entity = EntityMapper.toTrainerEntity(trainer, specialization);
+            TrainerEntity entity = trainerMapper.toEntity(trainer, specialization);
             entityManager.persist(entity);
             log.debug("Persisted trainer id={}", entity.getId());
-            return EntityMapper.toTrainer(entity);
+            return trainerMapper.toDomain(entity);
         }
         TrainerEntity entity = entityManager.find(TrainerEntity.class, trainer.id());
         if (entity == null) {
             throw new NoSuchElementException("Trainer not found: " + trainer.id());
         }
-        EntityMapper.applyTrainer(entity, trainer, specialization);
+        trainerMapper.update(entity, trainer, specialization);
         log.debug("Updated trainer id={}", entity.getId());
-        return EntityMapper.toTrainer(entity);
+        return trainerMapper.toDomain(entity);
     }
 
     @Override
     public Optional<Trainer> findById(Long id) {
         return Optional.ofNullable(entityManager.find(TrainerEntity.class, id))
-                .map(EntityMapper::toTrainer);
+                .map(trainerMapper::toDomain);
     }
 
     @Override
@@ -50,7 +57,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
         return entityManager.createQuery(SELECT_TRAINER + "where u.username = :username", TrainerEntity.class)
                 .setParameter("username", username)
                 .getResultList().stream().findFirst()
-                .map(EntityMapper::toTrainer);
+                .map(trainerMapper::toDomain);
     }
 
     @Override
@@ -61,7 +68,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
         return entityManager.createQuery(SELECT_TRAINER + "where u.username in :usernames", TrainerEntity.class)
                 .setParameter("usernames", usernames)
                 .getResultList().stream()
-                .map(EntityMapper::toTrainer)
+                .map(trainerMapper::toDomain)
                 .toList();
     }
 
@@ -69,7 +76,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
     public List<Trainer> findAll() {
         return entityManager.createQuery(SELECT_TRAINER, TrainerEntity.class)
                 .getResultList().stream()
-                .map(EntityMapper::toTrainer)
+                .map(trainerMapper::toDomain)
                 .toList();
     }
 
@@ -81,7 +88,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
                         TrainerEntity.class)
                 .setParameter("username", traineeUsername)
                 .getResultList().stream()
-                .map(EntityMapper::toTrainer)
+                .map(trainerMapper::toDomain)
                 .toList();
     }
 }

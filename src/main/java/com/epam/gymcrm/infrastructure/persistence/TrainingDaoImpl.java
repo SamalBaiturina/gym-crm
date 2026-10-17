@@ -6,6 +6,7 @@ import com.epam.gymcrm.infrastructure.persistence.entity.TraineeEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainingEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainingTypeEntity;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainingMapper;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -25,6 +26,12 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingDaoImpl.class);
 
+    private final TrainingMapper trainingMapper;
+
+    public TrainingDaoImpl(TrainingMapper trainingMapper) {
+        this.trainingMapper = trainingMapper;
+    }
+
     @Override
     public Training save(Training training) {
         if (training.id() != null) {
@@ -40,16 +47,16 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
         }
         TrainingTypeEntity type = findTrainingType(training.trainingType().name());
 
-        TrainingEntity entity = EntityMapper.toTrainingEntity(training, trainee, trainer, type);
+        TrainingEntity entity = trainingMapper.toEntity(training, trainee, trainer, type);
         entityManager.persist(entity);
         log.debug("Persisted training id={}", entity.getId());
-        return EntityMapper.toTraining(entity);
+        return trainingMapper.toDomain(entity);
     }
 
     @Override
     public Optional<Training> findById(Long id) {
         return Optional.ofNullable(entityManager.find(TrainingEntity.class, id))
-                .map(EntityMapper::toTraining);
+                .map(trainingMapper::toDomain);
     }
 
     @Override
@@ -57,7 +64,7 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
         return entityManager.createQuery(
                         "select t from TrainingEntity t join fetch t.trainingType", TrainingEntity.class)
                 .getResultList().stream()
-                .map(EntityMapper::toTraining)
+                .map(trainingMapper::toDomain)
                 .toList();
     }
 
@@ -106,7 +113,7 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
                 .orderBy(cb.asc(training.get("date")));
 
         return entityManager.createQuery(query).getResultList().stream()
-                .map(EntityMapper::toTraining)
+                .map(trainingMapper::toDomain)
                 .toList();
     }
 

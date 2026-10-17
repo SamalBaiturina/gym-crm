@@ -5,6 +5,8 @@ import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.infrastructure.persistence.entity.TraineeEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TraineeMapper;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainerMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -22,24 +24,32 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
 
     private static final String SELECT_TRAINEE = "select t from TraineeEntity t join fetch t.user u ";
 
+    private final TraineeMapper traineeMapper;
+    private final TrainerMapper trainerMapper;
+
+    public TraineeDaoImpl(TraineeMapper traineeMapper, TrainerMapper trainerMapper) {
+        this.traineeMapper = traineeMapper;
+        this.trainerMapper = trainerMapper;
+    }
+
     @Override
     public Trainee save(Trainee trainee) {
         if (trainee.id() == null) {
-            TraineeEntity entity = EntityMapper.toTraineeEntity(trainee);
+            TraineeEntity entity = traineeMapper.toEntity(trainee);
             entityManager.persist(entity);
             log.debug("Persisted trainee id={}", entity.getId());
-            return EntityMapper.toTrainee(entity);
+            return traineeMapper.toDomain(entity);
         }
         TraineeEntity entity = getEntity(trainee.id());
-        EntityMapper.applyTrainee(entity, trainee);
+        traineeMapper.update(entity, trainee);
         log.debug("Updated trainee id={}", entity.getId());
-        return EntityMapper.toTrainee(entity);
+        return traineeMapper.toDomain(entity);
     }
 
     @Override
     public Optional<Trainee> findById(Long id) {
         return Optional.ofNullable(entityManager.find(TraineeEntity.class, id))
-                .map(EntityMapper::toTrainee);
+                .map(traineeMapper::toDomain);
     }
 
     @Override
@@ -47,14 +57,14 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
         return entityManager.createQuery(SELECT_TRAINEE + "where u.username = :username", TraineeEntity.class)
                 .setParameter("username", username)
                 .getResultList().stream().findFirst()
-                .map(EntityMapper::toTrainee);
+                .map(traineeMapper::toDomain);
     }
 
     @Override
     public List<Trainee> findAll() {
         return entityManager.createQuery(SELECT_TRAINEE, TraineeEntity.class)
                 .getResultList().stream()
-                .map(EntityMapper::toTrainee)
+                .map(traineeMapper::toDomain)
                 .toList();
     }
 
@@ -84,7 +94,7 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
         trainee.getTrainers().clear();
         trainee.getTrainers().addAll(trainers);
         log.debug("Trainee id={} now has {} trainers", traineeId, trainers.size());
-        return trainers.stream().map(EntityMapper::toTrainer).toList();
+        return trainers.stream().map(trainerMapper::toDomain).toList();
     }
 
     private TraineeEntity getEntity(Long id) {
