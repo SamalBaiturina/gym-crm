@@ -1,6 +1,8 @@
 package com.epam.gymcrm;
 
 import com.epam.gymcrm.application.service.NewTraining;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -28,35 +30,37 @@ public class Main {
                     new Trainee(null, User.of("John", "Smith"), LocalDate.of(2000, 1, 1), "Astana"));
             log.info("Created: {} and {}", trainer, trainee);
 
-            String trainerLogin = trainer.user().username();
-            String trainerPassword = trainer.user().password();
-            String traineeLogin = trainee.user().username();
-            String traineePassword = trainee.user().password();
+            Credentials trainerCredentials =
+                    new Credentials(trainer.user().username(), trainer.user().password());
+            Credentials traineeCredentials =
+                    new Credentials(trainee.user().username(), trainee.user().password());
 
-            log.info("Credentials match: {}", facade.matchesTrainee(traineeLogin, traineePassword));
-            log.info("Wrong password matches: {}", facade.matchesTrainee(traineeLogin, "wrong"));
+            log.info("Credentials match: {}", facade.matchesTrainee(traineeCredentials));
+            log.info("Wrong password matches: {}",
+                    facade.matchesTrainee(new Credentials(traineeCredentials.username(), "wrong")));
 
             log.info("Not assigned trainers: {}",
-                    facade.getNotAssignedTrainers(traineeLogin, traineePassword).size());
-            facade.updateTraineeTrainers(traineeLogin, traineePassword, List.of(trainerLogin));
+                    facade.getNotAssignedTrainers(traineeCredentials).size());
+            facade.updateTraineeTrainers(traineeCredentials, List.of(trainerCredentials.username()));
             log.info("Not assigned trainers after assigning: {}",
-                    facade.getNotAssignedTrainers(traineeLogin, traineePassword).size());
+                    facade.getNotAssignedTrainers(traineeCredentials).size());
 
-            facade.addTraining(trainerLogin, trainerPassword,
-                    new NewTraining(traineeLogin, "Morning yoga", new TrainingType("YOGA"),
+            facade.addTraining(trainerCredentials,
+                    new NewTraining(traineeCredentials.username(), "Morning yoga", new TrainingType("YOGA"),
                             LocalDate.now(), 60));
             log.info("Trainee trainings: {}",
-                    facade.getTraineeTrainings(traineeLogin, traineePassword, null, null, null, "YOGA"));
+                    facade.getTraineeTrainings(traineeCredentials, null, null, null, "YOGA"));
             log.info("Trainer trainings: {}",
-                    facade.getTrainerTrainings(trainerLogin, trainerPassword, null, null, "John"));
+                    facade.getTrainerTrainings(trainerCredentials, null, null, "John"));
 
-            log.info("Trainee active after toggle: {}", facade.toggleTraineeActive(traineeLogin, traineePassword));
-            facade.changeTraineePassword(traineeLogin, traineePassword, "NewPass123");
+            log.info("Trainee active after toggle: {}", facade.toggleTraineeActive(traineeCredentials));
+            facade.changeTraineePassword(new PasswordChange(traineeCredentials, "NewPass123"));
 
-            facade.deleteTrainee(traineeLogin, "NewPass123");
-            log.info("Trainee still can log in after delete: {}", facade.matchesTrainee(traineeLogin, "NewPass123"));
+            Credentials newTraineeCredentials = new Credentials(traineeCredentials.username(), "NewPass123");
+            facade.deleteTrainee(newTraineeCredentials);
+            log.info("Trainee still can log in after delete: {}", facade.matchesTrainee(newTraineeCredentials));
             log.info("Trainer trainings after trainee delete: {}",
-                    facade.getTrainerTrainings(trainerLogin, trainerPassword, null, null, null).size());
+                    facade.getTrainerTrainings(trainerCredentials, null, null, null).size());
         }
     }
 }

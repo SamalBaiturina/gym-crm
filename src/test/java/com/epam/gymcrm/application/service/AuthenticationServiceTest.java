@@ -2,6 +2,7 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -15,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,6 +25,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
 
+    private static final Credentials TRAINEE_OK = new Credentials("John.Smith", "secret");
+    private static final Credentials TRAINEE_WRONG = new Credentials("John.Smith", "wrong");
+    private static final Credentials TRAINER_OK = new Credentials("Anna.Brown", "secret");
+    private static final Credentials TRAINER_WRONG = new Credentials("Anna.Brown", "wrong");
+    private static final Credentials NOBODY = new Credentials("nobody", "secret");
+
     @Mock
     private TraineeDao traineeDao;
     @Mock
@@ -31,85 +38,100 @@ class AuthenticationServiceTest {
     @InjectMocks
     private AuthenticationService service;
 
-    private Trainee traineeWithPassword(String password) {
-        User user = new User("John", "Smith", "John.Smith", password, true);
+    private Trainee trainee() {
+        User user = new User("John", "Smith", "John.Smith", "secret", true);
         return new Trainee(1L, user, LocalDate.of(2000, 1, 1), "Astana");
     }
 
-    private Trainer trainerWithPassword(String password) {
-        User user = new User("Anna", "Brown", "Anna.Brown", password, true);
+    private Trainer trainer() {
+        User user = new User("Anna", "Brown", "Anna.Brown", "secret", true);
         return new Trainer(5L, user, new TrainingType("YOGA"));
     }
 
+    // ---------- trainee ----------
+
     @Test
     void matchesTrainee_returnsTrue_forCorrectPassword() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(traineeWithPassword("secret")));
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
 
-        assertTrue(service.matchesTrainee("John.Smith", "secret"));
+        assertTrue(service.matchesTrainee(TRAINEE_OK));
     }
 
     @Test
     void matchesTrainee_returnsFalse_forWrongPassword() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(traineeWithPassword("secret")));
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
 
-        assertFalse(service.matchesTrainee("John.Smith", "wrong"));
-    }
-
-    @Test
-    void matchesTrainee_returnsFalse_whenPasswordIsNull() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(traineeWithPassword("secret")));
-
-        assertFalse(service.matchesTrainee("John.Smith", null));
+        assertFalse(service.matchesTrainee(TRAINEE_WRONG));
     }
 
     @Test
     void matchesTrainee_returnsFalse_whenUserDoesNotExist() {
         when(traineeDao.findByUsername("nobody")).thenReturn(Optional.empty());
 
-        assertFalse(service.matchesTrainee("nobody", "secret"));
+        assertFalse(service.matchesTrainee(NOBODY));
+    }
+
+    @Test
+    void authenticateTrainee_returnsTheTrainee_forCorrectPassword() {
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
+
+        Trainee result = service.authenticateTrainee(TRAINEE_OK);
+
+        assertEquals(1L, result.id());
     }
 
     @Test
     void authenticateTrainee_throws_forWrongPassword() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(traineeWithPassword("secret")));
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
 
-        assertThrows(AuthenticationException.class, () -> service.authenticateTrainee("John.Smith", "wrong"));
+        assertThrows(AuthenticationException.class, () -> service.authenticateTrainee(TRAINEE_WRONG));
     }
 
     @Test
-    void authenticateTrainee_passes_forCorrectPassword() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(traineeWithPassword("secret")));
+    void authenticateTrainee_throws_forUnknownUsername() {
+        when(traineeDao.findByUsername("nobody")).thenReturn(Optional.empty());
 
-        assertDoesNotThrow(() -> service.authenticateTrainee("John.Smith", "secret"));
+        assertThrows(AuthenticationException.class, () -> service.authenticateTrainee(NOBODY));
     }
+
+    // ---------- trainer ----------
 
     @Test
     void matchesTrainer_returnsTrue_forCorrectPassword() {
-        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainerWithPassword("secret")));
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
 
-        assertTrue(service.matchesTrainer("Anna.Brown", "secret"));
+        assertTrue(service.matchesTrainer(TRAINER_OK));
     }
 
     @Test
     void matchesTrainer_returnsFalse_forWrongPasswordOrUnknownUser() {
-        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainerWithPassword("secret")));
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
         when(trainerDao.findByUsername("nobody")).thenReturn(Optional.empty());
 
-        assertFalse(service.matchesTrainer("Anna.Brown", "wrong"));
-        assertFalse(service.matchesTrainer("nobody", "secret"));
+        assertFalse(service.matchesTrainer(TRAINER_WRONG));
+        assertFalse(service.matchesTrainer(NOBODY));
+    }
+
+    @Test
+    void authenticateTrainer_returnsTheTrainer_forCorrectPassword() {
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
+
+        Trainer result = service.authenticateTrainer(TRAINER_OK);
+
+        assertEquals(5L, result.id());
     }
 
     @Test
     void authenticateTrainer_throws_forWrongPassword() {
-        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainerWithPassword("secret")));
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
 
-        assertThrows(AuthenticationException.class, () -> service.authenticateTrainer("Anna.Brown", "wrong"));
+        assertThrows(AuthenticationException.class, () -> service.authenticateTrainer(TRAINER_WRONG));
     }
 
     @Test
-    void authenticateTrainer_passes_forCorrectPassword() {
-        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainerWithPassword("secret")));
+    void authenticateTrainer_throws_forUnknownUsername() {
+        when(trainerDao.findByUsername("nobody")).thenReturn(Optional.empty());
 
-        assertDoesNotThrow(() -> service.authenticateTrainer("Anna.Brown", "secret"));
+        assertThrows(AuthenticationException.class, () -> service.authenticateTrainer(NOBODY));
     }
 }

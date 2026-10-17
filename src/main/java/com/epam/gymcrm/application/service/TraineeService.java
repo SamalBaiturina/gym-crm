@@ -2,6 +2,8 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.User;
@@ -67,59 +69,58 @@ public class TraineeService {
     }
 
     @Transactional(readOnly = true)
-    public Trainee getByUsername(String username, String password) {
-        return authenticated(username, password);
+    public Trainee getByUsername(Credentials credentials) {
+        return authenticationService.authenticateTrainee(credentials);
     }
 
     @Transactional
-    public void changePassword(String username, String oldPassword, String newPassword) {
-        Trainee trainee = authenticated(username, oldPassword);
-        Validation.requireText(newPassword, "newPassword");
-        traineeDao.save(trainee.withUser(trainee.user().withPassword(newPassword)));
-        log.info("Password changed for trainee username={}", username);
+    public void changePassword(PasswordChange change) {
+        Trainee trainee = authenticationService.authenticateTrainee(change.current());
+        traineeDao.save(trainee.withUser(trainee.user().withPassword(change.newPassword())));
+        log.info("Password changed for trainee username={}", change.current().username());
     }
 
     /** Updates names, date of birth and address; username and password stay the same. */
     @Transactional
-    public Trainee update(String username, String password, Trainee changes) {
-        Trainee existing = authenticated(username, password);
+    public Trainee update(Credentials credentials, Trainee changes) {
+        Trainee existing = authenticationService.authenticateTrainee(credentials);
         Validation.requireNotNull(changes, "trainee");
         Validation.requireUser(changes.user());
         User user = existing.user().withNames(changes.user().firstName(), changes.user().lastName());
         Trainee saved = traineeDao.save(
                 new Trainee(existing.id(), user, changes.dateOfBirth(), changes.address()));
-        log.info("Updated trainee username={}", username);
+        log.info("Updated trainee username={}", credentials.username());
         return saved;
     }
 
     /** Flips the active flag on every call (not idempotent) and returns the new value. */
     @Transactional
-    public boolean toggleActive(String username, String password) {
-        Trainee trainee = authenticated(username, password);
+    public boolean toggleActive(Credentials credentials) {
+        Trainee trainee = authenticationService.authenticateTrainee(credentials);
         boolean active = !trainee.user().isActive();
         traineeDao.save(trainee.withUser(trainee.user().withActive(active)));
-        log.info("Trainee username={} is now active={}", username, active);
+        log.info("Trainee username={} is now active={}", credentials.username(), active);
         return active;
     }
 
     /** Deletes the trainee; trainings are deleted by cascade. */
     @Transactional
-    public void delete(String username, String password) {
-        Trainee trainee = authenticated(username, password);
+    public void delete(Credentials credentials) {
+        Trainee trainee = authenticationService.authenticateTrainee(credentials);
         traineeDao.deleteById(trainee.id());
-        log.info("Deleted trainee username={}", username);
+        log.info("Deleted trainee username={}", credentials.username());
     }
 
     @Transactional(readOnly = true)
-    public List<Trainer> getNotAssignedTrainers(String username, String password) {
-        authenticationService.authenticateTrainee(username, password);
-        return trainerDao.findNotAssignedTo(username);
+    public List<Trainer> getNotAssignedTrainers(Credentials credentials) {
+        authenticationService.authenticateTrainee(credentials);
+        return trainerDao.findNotAssignedTo(credentials.username());
     }
 
     /** Replaces the trainee's trainers with the given ones. */
     @Transactional
-    public List<Trainer> updateTrainers(String username, String password, List<String> trainerUsernames) {
-        Trainee trainee = authenticated(username, password);
+    public List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames) {
+        Trainee trainee = authenticationService.authenticateTrainee(credentials);
         Validation.requireNotNull(trainerUsernames, "trainerUsernames");
 
         Set<String> requested = new HashSet<>(trainerUsernames);
@@ -131,13 +132,7 @@ public class TraineeService {
         }
         Set<Long> ids = trainers.stream().map(Trainer::id).collect(Collectors.toSet());
         List<Trainer> updated = traineeDao.updateTrainers(trainee.id(), ids);
-        log.info("Updated trainers of trainee username={}, count={}", username, updated.size());
+        log.info("Updated trainers of trainee username={}, count={}", credentials.username(), updated.size());
         return updated;
-    }
-
-    private Trainee authenticated(String username, String password) {
-        authenticationService.authenticateTrainee(username, password);
-        return traineeDao.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("Trainee not found: " + username));
     }
 }

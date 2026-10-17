@@ -1,8 +1,8 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
@@ -23,7 +23,6 @@ public class TrainingService {
 
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
-    private TrainerDao trainerDao;
     private AuthenticationService authenticationService;
 
     @Autowired
@@ -37,19 +36,14 @@ public class TrainingService {
     }
 
     @Autowired
-    public void setTrainerDao(TrainerDao trainerDao) {
-        this.trainerDao = trainerDao;
-    }
-
-    @Autowired
     public void setAuthenticationService(AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
     }
 
     /** The authenticated trainer adds a training with the given trainee. */
     @Transactional
-    public Training addTraining(String trainerUsername, String trainerPassword, NewTraining request) {
-        authenticationService.authenticateTrainer(trainerUsername, trainerPassword);
+    public Training addTraining(Credentials trainerCredentials, NewTraining request) {
+        Trainer trainer = authenticationService.authenticateTrainer(trainerCredentials);
         Validation.requireNotNull(request, "training");
         Validation.requireText(request.traineeUsername(), "traineeUsername");
         Validation.requireText(request.name(), "trainingName");
@@ -58,8 +52,6 @@ public class TrainingService {
         Validation.requireNotNull(request.date(), "trainingDate");
         Validation.requirePositive(request.duration(), "trainingDuration");
 
-        Trainer trainer = trainerDao.findByUsername(trainerUsername)
-                .orElseThrow(() -> new NoSuchElementException("Trainer not found: " + trainerUsername));
         Trainee trainee = traineeDao.findByUsername(request.traineeUsername())
                 .orElseThrow(() -> new NoSuchElementException(
                         "Trainee not found: " + request.traineeUsername()));
@@ -70,19 +62,19 @@ public class TrainingService {
         return saved;
     }
 
-    /** Trainings of the trainee; every filter except the credentials may be null. */
+    /** Trainings of the trainee; every filter may be null. */
     @Transactional(readOnly = true)
-    public List<Training> getTraineeTrainings(String username, String password, LocalDate from,
-                                              LocalDate to, String trainerName, String trainingTypeName) {
-        authenticationService.authenticateTrainee(username, password);
-        return trainingDao.findForTrainee(username, from, to, trainerName, trainingTypeName);
+    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate from, LocalDate to,
+                                              String trainerName, String trainingTypeName) {
+        authenticationService.authenticateTrainee(credentials);
+        return trainingDao.findForTrainee(credentials.username(), from, to, trainerName, trainingTypeName);
     }
 
-    /** Trainings of the trainer; every filter except the credentials may be null. */
+    /** Trainings of the trainer; every filter may be null. */
     @Transactional(readOnly = true)
-    public List<Training> getTrainerTrainings(String username, String password, LocalDate from,
-                                              LocalDate to, String traineeName) {
-        authenticationService.authenticateTrainer(username, password);
-        return trainingDao.findForTrainer(username, from, to, traineeName);
+    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate from, LocalDate to,
+                                              String traineeName) {
+        authenticationService.authenticateTrainer(credentials);
+        return trainingDao.findForTrainer(credentials.username(), from, to, traineeName);
     }
 }

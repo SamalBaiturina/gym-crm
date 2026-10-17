@@ -2,14 +2,16 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.domain.model.Trainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import java.util.Optional;
 
 @Service
 public class AuthenticationService {
@@ -30,41 +32,40 @@ public class AuthenticationService {
     }
 
     @Transactional(readOnly = true)
-    public boolean matchesTrainee(String username, String password) {
-        return traineeDao.findByUsername(username)
-                .map(trainee -> passwordMatches(trainee.user().password(), password))
-                .orElse(false);
+    public boolean matchesTrainee(Credentials credentials) {
+        return findTrainee(credentials).isPresent();
     }
 
     @Transactional(readOnly = true)
-    public boolean matchesTrainer(String username, String password) {
-        return trainerDao.findByUsername(username)
-                .map(trainer -> passwordMatches(trainer.user().password(), password))
-                .orElse(false);
+    public boolean matchesTrainer(Credentials credentials) {
+        return findTrainer(credentials).isPresent();
     }
 
+    /** Returns the trainee if the credentials are valid; unknown username and wrong password look the same. */
     @Transactional(readOnly = true)
-    public void authenticateTrainee(String username, String password) {
-        if (!matchesTrainee(username, password)) {
-            log.warn("Trainee authentication failed for username={}", username);
-            throw new AuthenticationException();
-        }
+    public Trainee authenticateTrainee(Credentials credentials) {
+        return findTrainee(credentials).orElseThrow(() -> {
+            log.warn("Trainee authentication failed for username={}", credentials.username());
+            return new AuthenticationException();
+        });
     }
 
+    /** Returns the trainer if the credentials are valid; unknown username and wrong password look the same. */
     @Transactional(readOnly = true)
-    public void authenticateTrainer(String username, String password) {
-        if (!matchesTrainer(username, password)) {
-            log.warn("Trainer authentication failed for username={}", username);
-            throw new AuthenticationException();
-        }
+    public Trainer authenticateTrainer(Credentials credentials) {
+        return findTrainer(credentials).orElseThrow(() -> {
+            log.warn("Trainer authentication failed for username={}", credentials.username());
+            return new AuthenticationException();
+        });
     }
 
-    /** Constant-time comparison, so the response time does not reveal how many characters matched. */
-    private boolean passwordMatches(String stored, String given) {
-        if (stored == null || given == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(
-                stored.getBytes(StandardCharsets.UTF_8), given.getBytes(StandardCharsets.UTF_8));
+    private Optional<Trainee> findTrainee(Credentials credentials) {
+        return traineeDao.findByUsername(credentials.username())
+                .filter(trainee -> trainee.user().passwordMatches(credentials.password()));
+    }
+
+    private Optional<Trainer> findTrainer(Credentials credentials) {
+        return trainerDao.findByUsername(credentials.username())
+                .filter(trainer -> trainer.user().passwordMatches(credentials.password()));
     }
 }

@@ -1,6 +1,8 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.User;
 import org.slf4j.Logger;
@@ -8,8 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.NoSuchElementException;
 
 @Service
 public class TrainerService {
@@ -56,49 +56,42 @@ public class TrainerService {
     }
 
     @Transactional(readOnly = true)
-    public Trainer getByUsername(String username, String password) {
-        return authenticated(username, password);
+    public Trainer getByUsername(Credentials credentials) {
+        return authenticationService.authenticateTrainer(credentials);
     }
 
     @Transactional
-    public void changePassword(String username, String oldPassword, String newPassword) {
-        Trainer trainer = authenticated(username, oldPassword);
-        Validation.requireText(newPassword, "newPassword");
-        trainerDao.save(trainer.withUser(trainer.user().withPassword(newPassword)));
-        log.info("Password changed for trainer username={}", username);
+    public void changePassword(PasswordChange change) {
+        Trainer trainer = authenticationService.authenticateTrainer(change.current());
+        trainerDao.save(trainer.withUser(trainer.user().withPassword(change.newPassword())));
+        log.info("Password changed for trainer username={}", change.current().username());
     }
 
     /** Updates names and specialization; username and password stay the same. */
     @Transactional
-    public Trainer update(String username, String password, Trainer changes) {
-        Trainer existing = authenticated(username, password);
+    public Trainer update(Credentials credentials, Trainer changes) {
+        Trainer existing = authenticationService.authenticateTrainer(credentials);
         Validation.requireNotNull(changes, "trainer");
         Validation.requireUser(changes.user());
         requireSpecialization(changes);
         User user = existing.user().withNames(changes.user().firstName(), changes.user().lastName());
         Trainer saved = trainerDao.save(new Trainer(existing.id(), user, changes.specialization()));
-        log.info("Updated trainer username={}", username);
+        log.info("Updated trainer username={}", credentials.username());
         return saved;
     }
 
     /** Flips the active flag on every call (not idempotent) and returns the new value. */
     @Transactional
-    public boolean toggleActive(String username, String password) {
-        Trainer trainer = authenticated(username, password);
+    public boolean toggleActive(Credentials credentials) {
+        Trainer trainer = authenticationService.authenticateTrainer(credentials);
         boolean active = !trainer.user().isActive();
         trainerDao.save(trainer.withUser(trainer.user().withActive(active)));
-        log.info("Trainer username={} is now active={}", username, active);
+        log.info("Trainer username={} is now active={}", credentials.username(), active);
         return active;
     }
 
     private void requireSpecialization(Trainer trainer) {
         Validation.requireNotNull(trainer.specialization(), "specialization");
         Validation.requireText(trainer.specialization().name(), "specialization");
-    }
-
-    private Trainer authenticated(String username, String password) {
-        authenticationService.authenticateTrainer(username, password);
-        return trainerDao.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("Trainer not found: " + username));
     }
 }

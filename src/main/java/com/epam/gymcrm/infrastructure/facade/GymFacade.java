@@ -5,6 +5,8 @@ import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
@@ -40,69 +42,69 @@ public class GymFacade {
         return traineeService.create(trainee);
     }
 
-    public boolean matchesTrainee(String username, String password) {
-        return authenticationService.matchesTrainee(username, password);
+    public boolean matchesTrainee(Credentials credentials) {
+        return authenticationService.matchesTrainee(credentials);
     }
 
-    public boolean matchesTrainer(String username, String password) {
-        return authenticationService.matchesTrainer(username, password);
+    public boolean matchesTrainer(Credentials credentials) {
+        return authenticationService.matchesTrainer(credentials);
     }
 
-    public Trainer getTrainer(String username, String password) {
-        return trainerService.getByUsername(username, password);
+    public Trainer getTrainer(Credentials credentials) {
+        return trainerService.getByUsername(credentials);
     }
 
-    public Trainee getTrainee(String username, String password) {
-        return traineeService.getByUsername(username, password);
+    public Trainee getTrainee(Credentials credentials) {
+        return traineeService.getByUsername(credentials);
     }
 
-    public void changeTraineePassword(String username, String oldPassword, String newPassword) {
-        traineeService.changePassword(username, oldPassword, newPassword);
+    public void changeTraineePassword(PasswordChange change) {
+        traineeService.changePassword(change);
     }
 
-    public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
-        trainerService.changePassword(username, oldPassword, newPassword);
+    public void changeTrainerPassword(PasswordChange change) {
+        trainerService.changePassword(change);
     }
 
-    public Trainer updateTrainer(String username, String password, Trainer changes) {
-        return trainerService.update(username, password, changes);
+    public Trainer updateTrainer(Credentials credentials, Trainer changes) {
+        return trainerService.update(credentials, changes);
     }
 
-    public Trainee updateTrainee(String username, String password, Trainee changes) {
-        return traineeService.update(username, password, changes);
+    public Trainee updateTrainee(Credentials credentials, Trainee changes) {
+        return traineeService.update(credentials, changes);
     }
 
-    public boolean toggleTraineeActive(String username, String password) {
-        return traineeService.toggleActive(username, password);
+    public boolean toggleTraineeActive(Credentials credentials) {
+        return traineeService.toggleActive(credentials);
     }
 
-    public boolean toggleTrainerActive(String username, String password) {
-        return trainerService.toggleActive(username, password);
+    public boolean toggleTrainerActive(Credentials credentials) {
+        return trainerService.toggleActive(credentials);
     }
 
-    public void deleteTrainee(String username, String password) {
-        traineeService.delete(username, password);
+    public void deleteTrainee(Credentials credentials) {
+        traineeService.delete(credentials);
     }
 
-    public List<Training> getTraineeTrainings(String username, String password, LocalDate from,
-                                              LocalDate to, String trainerName, String trainingTypeName) {
-        return trainingService.getTraineeTrainings(username, password, from, to, trainerName, trainingTypeName);
+    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate from, LocalDate to,
+                                              String trainerName, String trainingTypeName) {
+        return trainingService.getTraineeTrainings(credentials, from, to, trainerName, trainingTypeName);
     }
 
-    public List<Training> getTrainerTrainings(String username, String password, LocalDate from,
-                                              LocalDate to, String traineeName) {
-        return trainingService.getTrainerTrainings(username, password, from, to, traineeName);
+    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate from, LocalDate to,
+                                              String traineeName) {
+        return trainingService.getTrainerTrainings(credentials, from, to, traineeName);
     }
 
-    public Training addTraining(String trainerUsername, String trainerPassword, NewTraining training) {
-        return trainingService.addTraining(trainerUsername, trainerPassword, training);
+    public Training addTraining(Credentials trainerCredentials, NewTraining training) {
+        return trainingService.addTraining(trainerCredentials, training);
     }
 
-    public List<Trainer> getNotAssignedTrainers(String traineeUsername, String traineePassword) {
-        return traineeService.getNotAssignedTrainers(traineeUsername, traineePassword);
+    public List<Trainer> getNotAssignedTrainers(Credentials traineeCredentials) {
+        return traineeService.getNotAssignedTrainers(traineeCredentials);
     }
 
-    public List<Trainer> updateTraineeTrainers(String username, String password, List<String> trainerUsernames) {
-        return traineeService.updateTrainers(username, password, trainerUsernames);
+    public List<Trainer> updateTraineeTrainers(Credentials credentials, List<String> trainerUsernames) {
+        return traineeService.updateTrainers(credentials, trainerUsernames);
     }
 }

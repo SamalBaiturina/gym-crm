@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModelTest {
@@ -37,6 +38,72 @@ class ModelTest {
 
         assertFalse(user.toString().contains("secret"));
         assertTrue(user.toString().contains("John.Smith"));
+    }
+
+    @Test
+    void passwordMatches_isTrueOnlyForTheSamePassword() {
+        User user = User.of("John", "Smith").withCredentials("John.Smith", "secret");
+
+        assertTrue(user.passwordMatches("secret"));
+        assertFalse(user.passwordMatches("wrong"));
+        assertFalse(user.passwordMatches(null));
+    }
+
+    @Test
+    void passwordMatches_isFalseWhenUserHasNoPassword() {
+        assertFalse(User.of("John", "Smith").passwordMatches("secret"));
+    }
+
+    @Test
+    void credentialsKeepUsernameAndPassword() {
+        Credentials credentials = new Credentials("John.Smith", "secret");
+
+        assertEquals("John.Smith", credentials.username());
+        assertEquals("secret", credentials.password());
+    }
+
+    @Test
+    void credentialsRequireUsernameAndPassword() {
+        assertThrows(IllegalArgumentException.class, () -> new Credentials(null, "secret"));
+        assertThrows(IllegalArgumentException.class, () -> new Credentials(" ", "secret"));
+        assertThrows(IllegalArgumentException.class, () -> new Credentials("John.Smith", null));
+        assertThrows(IllegalArgumentException.class, () -> new Credentials("John.Smith", ""));
+    }
+
+    @Test
+    void credentialsToStringHidesPassword() {
+        Credentials credentials = new Credentials("John.Smith", "secret");
+
+        assertFalse(credentials.toString().contains("secret"));
+        assertTrue(credentials.toString().contains("John.Smith"));
+    }
+
+    @Test
+    void passwordChangeKeepsCurrentCredentialsAndNewPassword() {
+        Credentials current = new Credentials("John.Smith", "secret");
+
+        PasswordChange change = new PasswordChange(current, "newPass");
+
+        assertEquals(current, change.current());
+        assertEquals("newPass", change.newPassword());
+    }
+
+    @Test
+    void passwordChangeRequiresCurrentCredentialsAndNewPassword() {
+        Credentials current = new Credentials("John.Smith", "secret");
+
+        assertThrows(IllegalArgumentException.class, () -> new PasswordChange(null, "newPass"));
+        assertThrows(IllegalArgumentException.class, () -> new PasswordChange(current, null));
+        assertThrows(IllegalArgumentException.class, () -> new PasswordChange(current, " "));
+    }
+
+    @Test
+    void passwordChangeToStringHidesPasswords() {
+        PasswordChange change = new PasswordChange(new Credentials("John.Smith", "secret"), "newPass");
+
+        assertFalse(change.toString().contains("secret"));
+        assertFalse(change.toString().contains("newPass"));
+        assertTrue(change.toString().contains("John.Smith"));
     }
 
     @Test
