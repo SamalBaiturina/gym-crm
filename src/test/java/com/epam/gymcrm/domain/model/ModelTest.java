@@ -190,14 +190,17 @@ class ModelTest {
 
     @Test
     void trainingWithIdKeepsOtherFields() {
-        Training training = new Training(null, 1L, 2L, "Morning", new TrainingType("YOGA"),
+        Trainee trainee = new Trainee(1L, User.of("John", "Smith"), null, null);
+        Trainer trainer = new Trainer(2L, User.of("Anna", "Brown"), new TrainingType("YOGA"));
+        Training training = new Training(null, trainee, trainer, "Morning", new TrainingType("YOGA"),
                 LocalDate.of(2026, 9, 1), 60);
 
         Training withId = training.withId(7L);
 
+        assertNull(training.id());
         assertEquals(7L, withId.id());
-        assertEquals(1L, withId.traineeId());
-        assertEquals(2L, withId.trainerId());
+        assertEquals(trainee, withId.trainee());
+        assertEquals(trainer, withId.trainer());
         assertEquals("Morning", withId.trainingName());
         assertEquals(60, withId.trainingDuration());
         assertEquals(LocalDate.of(2026, 9, 1), withId.trainingDate());

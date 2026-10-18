@@ -98,63 +98,57 @@ class TraineeDaoImplTest extends JpaTestBase {
 
     @Test
     void updateTrainers_replacesAssignedTrainers() {
-        Long traineeId = tx.execute(status -> traineeDao.save(TestData.trainee("John", "Smith")).id());
-        List<Long> trainerIds = tx.execute(status -> List.of(
-                trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA")).id(),
-                trainerDao.save(TestData.trainer("Bob", "White", "FITNESS")).id()));
+        Trainee trainee = tx.execute(status -> traineeDao.save(TestData.trainee("John", "Smith")));
+        List<Trainer> trainers = tx.execute(status -> List.of(
+                trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA")),
+                trainerDao.save(TestData.trainer("Bob", "White", "FITNESS"))));
 
-        tx.executeWithoutResult(status ->
-                traineeDao.updateTrainers(traineeId, Set.of(trainerIds.get(0), trainerIds.get(1))));
+        tx.executeWithoutResult(status -> traineeDao.updateTrainers(trainee, trainers));
         assertEquals(2, count("trainee_trainer"));
 
-        List<Trainer> result = tx.execute(status ->
-                traineeDao.updateTrainers(traineeId, Set.of(trainerIds.get(0))));
+        tx.executeWithoutResult(status -> traineeDao.updateTrainers(trainee, List.of(trainers.get(0))));
 
-        assertEquals(1, result.size());
-        assertEquals("Anna.Brown", result.get(0).user().username());
         assertEquals(1, count("trainee_trainer"));
+        List<Trainer> notAssigned = tx.execute(status -> trainerDao.findNotAssignedTo("John.Smith"));
+        assertEquals(1, notAssigned.size());
+        assertEquals("Bob.White", notAssigned.get(0).user().username());
     }
 
     @Test
-    void updateTrainers_withEmptySet_removesAllAssignments() {
-        Long traineeId = tx.execute(status -> traineeDao.save(TestData.trainee("John", "Smith")).id());
-        Long trainerId = tx.execute(status -> trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA")).id());
-        tx.executeWithoutResult(status -> traineeDao.updateTrainers(traineeId, Set.of(trainerId)));
+    void updateTrainers_withEmptyList_removesAllAssignments() {
+        Trainee trainee = tx.execute(status -> traineeDao.save(TestData.trainee("John", "Smith")));
+        Trainer trainer = tx.execute(status -> trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA")));
+        tx.executeWithoutResult(status -> traineeDao.updateTrainers(trainee, List.of(trainer)));
+        assertEquals(1, count("trainee_trainer"));
 
-        List<Trainer> result = tx.execute(status -> traineeDao.updateTrainers(traineeId, Set.of()));
-
-        assertTrue(result.isEmpty());
-        assertEquals(0, count("trainee_trainer"));
-    }
-
-    @Test
-    void updateTrainers_withUnknownTrainer_throwsAndChangesNothing() {
-        Long traineeId = tx.execute(status -> traineeDao.save(TestData.trainee("John", "Smith")).id());
-
-        assertThrows(NoSuchElementException.class, () ->
-                tx.execute(status -> traineeDao.updateTrainers(traineeId, Set.of(999L))));
+        tx.executeWithoutResult(status -> traineeDao.updateTrainers(trainee, List.of()));
 
         assertEquals(0, count("trainee_trainer"));
     }
 
     @Test
     void updateTrainers_withUnknownTrainee_throws() {
+        Trainee unknown = new Trainee(999L, User.of("A", "B").withCredentials("A.B", "p"), null, null);
+
         assertThrows(NoSuchElementException.class, () ->
-                tx.execute(status -> traineeDao.updateTrainers(999L, Set.of())));
+                tx.execute(status -> {
+                    traineeDao.updateTrainers(unknown, List.of());
+                    return null;
+                }));
     }
 
     @Test
-    void deleteById_removesTraineeTrainingsAndUserButKeepsTrainer() {
-        Long traineeId = tx.execute(status -> {
-            Trainee trainee = traineeDao.save(TestData.trainee("John", "Smith"));
-            Trainer trainer = trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA"));
-            trainingDao.save(new Training(null, trainee.id(), trainer.id(), "Session",
+    void delete_removesTraineeTrainingsAndUserButKeepsTrainer() {
+        Trainee trainee = tx.execute(status -> {
+            Trainee savedTrainee = traineeDao.save(TestData.trainee("John", "Smith"));
+            Trainer savedTrainer = trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA"));
+            trainingDao.save(new Training(null, savedTrainee, savedTrainer, "Session",
                     new TrainingType("YOGA"), LocalDate.now(), 60));
-            return trainee.id();
+            return savedTrainee;
         });
         assertEquals(1, count("training"));
 
-        tx.executeWithoutResult(status -> traineeDao.deleteById(traineeId));
+        tx.executeWithoutResult(status -> traineeDao.delete(trainee));
 
         assertEquals(0, count("trainee"));
         assertEquals(0, count("training"));      // removed by cascade
@@ -164,8 +158,10 @@ class TraineeDaoImplTest extends JpaTestBase {
     }
 
     @Test
-    void deleteById_withUnknownId_doesNothing() {
-        tx.executeWithoutResult(status -> traineeDao.deleteById(999L));
+    void delete_withUnknownTrainee_doesNothing() {
+        Trainee unknown = new Trainee(999L, User.of("A", "B").withCredentials("A.B", "p"), null, null);
+
+        tx.executeWithoutResult(status -> traineeDao.delete(unknown));
 
         assertEquals(0, count("trainee"));
     }

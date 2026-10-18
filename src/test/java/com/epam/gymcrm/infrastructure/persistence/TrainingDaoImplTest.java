@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,7 +48,7 @@ class TrainingDaoImplTest extends JpaTestBase {
 
     private Training training(Trainee trainee, Trainer trainer, String name, String type,
                               LocalDate date, int minutes) {
-        return new Training(null, trainee.id(), trainer.id(), name, new TrainingType(type), date, minutes);
+        return new Training(null, trainee, trainer, name, new TrainingType(type), date, minutes);
     }
 
     private List<String> names(List<Training> trainings) {
@@ -57,38 +58,24 @@ class TrainingDaoImplTest extends JpaTestBase {
     // ---------- save / find ----------
 
     @Test
-    void save_persistsTraining_andFindByIdReturnsIt() {
-        Long id = tx.execute(status -> {
+    void save_returnsTrainingWithGeneratedId_andFindByIdReturnsItWithBothSides() {
+        Training saved = tx.execute(status -> {
             Trainee john = traineeDao.findByUsername("John.Smith").orElseThrow();
             Trainer bob = trainerDao.findByUsername("Bob.White").orElseThrow();
-            return trainingDao.save(training(john, bob, "Stretching", "YOGA", LocalDate.of(2026, 4, 1), 30)).id();
+            return trainingDao.save(training(john, bob, "Stretching", "YOGA", LocalDate.of(2026, 4, 1), 30));
         });
+        assertNotNull(saved.id());
 
-        Training found = tx.execute(status -> trainingDao.findById(id).orElseThrow());
+        Training found = tx.execute(status -> trainingDao.findById(saved.id()).orElseThrow());
 
         assertEquals("Stretching", found.trainingName());
         assertEquals("YOGA", found.trainingType().name());
         assertEquals(30, found.trainingDuration());
         assertEquals(LocalDate.of(2026, 4, 1), found.trainingDate());
+        assertEquals("John.Smith", found.trainee().user().username());
+        assertEquals("Bob.White", found.trainer().user().username());
+        assertEquals("FITNESS", found.trainer().specialization().name());
         assertEquals(5, count("training"));
-    }
-
-    @Test
-    void save_withUnknownTrainee_throws() {
-        assertThrows(NoSuchElementException.class, () -> tx.execute(status -> {
-            Trainer bob = trainerDao.findByUsername("Bob.White").orElseThrow();
-            return trainingDao.save(new Training(null, 999L, bob.id(), "X",
-                    new TrainingType("YOGA"), LocalDate.now(), 30));
-        }));
-    }
-
-    @Test
-    void save_withUnknownTrainer_throws() {
-        assertThrows(NoSuchElementException.class, () -> tx.execute(status -> {
-            Trainee john = traineeDao.findByUsername("John.Smith").orElseThrow();
-            return trainingDao.save(new Training(null, john.id(), 999L, "X",
-                    new TrainingType("YOGA"), LocalDate.now(), 30));
-        }));
     }
 
     @Test
@@ -102,7 +89,8 @@ class TrainingDaoImplTest extends JpaTestBase {
 
     @Test
     void save_withExistingId_isNotSupported() {
-        Training existing = new Training(1L, 1L, 1L, "X", new TrainingType("YOGA"), LocalDate.now(), 30);
+        Training existing = new Training(1L, TestData.trainee("A", "B"), TestData.trainer("C", "D", "YOGA"),
+                "X", new TrainingType("YOGA"), LocalDate.now(), 30);
 
         assertThrows(IllegalArgumentException.class, () -> tx.execute(status -> trainingDao.save(existing)));
     }
@@ -125,6 +113,16 @@ class TrainingDaoImplTest extends JpaTestBase {
                 trainingDao.findForTrainee("John.Smith", TraineeTrainingCriteria.any()));
 
         assertEquals(List.of("Yoga basics", "Cardio", "Yoga advanced"), names(result));
+    }
+
+    @Test
+    void findForTrainee_returnsTrainingsWithTheirTrainers() {
+        List<Training> result = tx.execute(status ->
+                trainingDao.findForTrainee("John.Smith", TraineeTrainingCriteria.any()));
+
+        assertEquals("Anna.Brown", result.get(0).trainer().user().username());
+        assertEquals("Bob.White", result.get(1).trainer().user().username());
+        assertEquals("John.Smith", result.get(0).trainee().user().username());
     }
 
     @Test
@@ -184,6 +182,15 @@ class TrainingDaoImplTest extends JpaTestBase {
                 trainingDao.findForTrainer("Anna.Brown", TrainerTrainingCriteria.any()));
 
         assertEquals(List.of("Yoga basics", "Yoga for Mike", "Yoga advanced"), names(result));
+    }
+
+    @Test
+    void findForTrainer_returnsTrainingsWithTheirTrainees() {
+        List<Training> result = tx.execute(status ->
+                trainingDao.findForTrainer("Anna.Brown", TrainerTrainingCriteria.any()));
+
+        assertEquals("John.Smith", result.get(0).trainee().user().username());
+        assertEquals("Mike.Jones", result.get(1).trainee().user().username());
     }
 
     @Test

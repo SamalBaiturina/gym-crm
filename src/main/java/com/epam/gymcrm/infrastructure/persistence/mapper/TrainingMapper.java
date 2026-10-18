@@ -10,14 +10,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class TrainingMapper {
 
+    private final TraineeMapper traineeMapper;
+    private final TrainerMapper trainerMapper;
     private final TrainingTypeMapper trainingTypeMapper;
 
-    public TrainingMapper(TrainingTypeMapper trainingTypeMapper) {
+    public TrainingMapper(TraineeMapper traineeMapper, TrainerMapper trainerMapper,
+                          TrainingTypeMapper trainingTypeMapper) {
+        this.traineeMapper = traineeMapper;
+        this.trainerMapper = trainerMapper;
         this.trainingTypeMapper = trainingTypeMapper;
     }
 
     public Training toDomain(TrainingEntity entity) {
-        return new Training(entity.getId(), entity.getTrainee().getId(), entity.getTrainer().getId(),
+        return new Training(entity.getId(),
+                traineeMapper.toDomain(entity.getTrainee()),
+                trainerMapper.toDomain(entity.getTrainer()),
                 entity.getName(), trainingTypeMapper.toDomain(entity.getTrainingType()),
                 entity.getDate(), entity.getDuration());
     }

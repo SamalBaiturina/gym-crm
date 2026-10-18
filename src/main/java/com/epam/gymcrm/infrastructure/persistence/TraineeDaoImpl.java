@@ -6,16 +6,15 @@ import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.infrastructure.persistence.entity.TraineeEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
 import com.epam.gymcrm.infrastructure.persistence.mapper.TraineeMapper;
-import com.epam.gymcrm.infrastructure.persistence.mapper.TrainerMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
@@ -25,11 +24,9 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
     private static final String SELECT_TRAINEE = "select t from TraineeEntity t join fetch t.user u ";
 
     private final TraineeMapper traineeMapper;
-    private final TrainerMapper trainerMapper;
 
-    public TraineeDaoImpl(TraineeMapper traineeMapper, TrainerMapper trainerMapper) {
+    public TraineeDaoImpl(TraineeMapper traineeMapper) {
         this.traineeMapper = traineeMapper;
-        this.trainerMapper = trainerMapper;
     }
 
     @Override
@@ -69,32 +66,25 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
     }
 
     @Override
-    public void deleteById(Long id) {
-        TraineeEntity entity = entityManager.find(TraineeEntity.class, id);
+    public void delete(Trainee trainee) {
+        // find() takes the entity from the persistence context if the service has already loaded it
+        TraineeEntity entity = entityManager.find(TraineeEntity.class, trainee.id());
         if (entity != null) {
             entityManager.remove(entity);
-            log.debug("Removed trainee id={}", id);
+            log.debug("Removed trainee id={}", trainee.id());
         }
     }
 
     @Override
-    public List<Trainer> updateTrainers(Long traineeId, Set<Long> trainerIds) {
-        TraineeEntity trainee = getEntity(traineeId);
-        Set<TrainerEntity> trainers = new HashSet<>();
-        if (!trainerIds.isEmpty()) {
-            trainers.addAll(entityManager.createQuery(
-                            "select t from TrainerEntity t join fetch t.user join fetch t.specialization "
-                                    + "where t.id in :ids", TrainerEntity.class)
-                    .setParameter("ids", trainerIds)
-                    .getResultList());
-        }
-        if (trainers.size() != trainerIds.size()) {
-            throw new NoSuchElementException("Some trainers were not found: " + trainerIds);
-        }
-        trainee.getTrainers().clear();
-        trainee.getTrainers().addAll(trainers);
-        log.debug("Trainee id={} now has {} trainers", traineeId, trainers.size());
-        return trainers.stream().map(trainerMapper::toDomain).toList();
+    public void updateTrainers(Trainee trainee, List<Trainer> trainers) {
+        TraineeEntity entity = getEntity(trainee.id());
+        // references carry only the id, so no SELECT is needed to fill the join table
+        Set<TrainerEntity> references = trainers.stream()
+                .map(trainer -> entityManager.getReference(TrainerEntity.class, trainer.id()))
+                .collect(Collectors.toSet());
+        entity.getTrainers().clear();
+        entity.getTrainers().addAll(references);
+        log.debug("Trainee id={} now has {} trainers", trainee.id(), references.size());
     }
 
     private TraineeEntity getEntity(Long id) {

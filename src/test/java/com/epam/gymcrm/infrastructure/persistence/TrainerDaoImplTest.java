@@ -101,7 +101,7 @@ class TrainerDaoImplTest extends JpaTestBase {
             Trainee trainee = traineeDao.save(TestData.trainee("John", "Smith"));
             Trainer anna = trainerDao.save(TestData.trainer("Anna", "Brown", "YOGA"));
             trainerDao.save(TestData.trainer("Bob", "White", "FITNESS"));
-            traineeDao.updateTrainers(trainee.id(), Set.of(anna.id()));
+            traineeDao.updateTrainers(trainee, List.of(anna));
         });
 
         List<Trainer> result = tx.execute(status -> trainerDao.findNotAssignedTo("John.Smith"));

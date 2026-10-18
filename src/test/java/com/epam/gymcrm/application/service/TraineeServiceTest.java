@@ -18,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,8 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -56,8 +54,10 @@ class TraineeServiceTest {
         return new Trainee(1L, user, LocalDate.of(2000, 1, 1), "Astana");
     }
 
-    private void givenAuthenticatedTrainee(boolean active) {
-        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(existingTrainee(active));
+    private Trainee givenAuthenticatedTrainee(boolean active) {
+        Trainee trainee = existingTrainee(active);
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee);
+        return trainee;
     }
 
     private Trainee savedTrainee() {
@@ -190,12 +190,12 @@ class TraineeServiceTest {
     // ---------- delete ----------
 
     @Test
-    void delete_removesTraineeById() {
-        givenAuthenticatedTrainee(true);
+    void delete_removesTheAuthenticatedTrainee() {
+        Trainee trainee = givenAuthenticatedTrainee(true);
 
         service.delete(CREDENTIALS);
 
-        verify(traineeDao).deleteById(1L);
+        verify(traineeDao).delete(trainee);
     }
 
     @Test
@@ -203,7 +203,7 @@ class TraineeServiceTest {
         when(authenticationService.authenticateTrainee(CREDENTIALS)).thenThrow(new AuthenticationException());
 
         assertThrows(AuthenticationException.class, () -> service.delete(CREDENTIALS));
-        verify(traineeDao, never()).deleteById(anyLong());
+        verify(traineeDao, never()).delete(any());
     }
 
     // ---------- trainers ----------
@@ -225,24 +225,24 @@ class TraineeServiceTest {
 
     @Test
     void updateTrainers_assignsFoundTrainers() {
-        givenAuthenticatedTrainee(true);
+        Trainee trainee = givenAuthenticatedTrainee(true);
         Trainer anna = trainer(5L, "Anna", "Brown");
-        when(trainerDao.findByUsernames(Set.of("Anna.Brown"))).thenReturn(List.of(anna));
-        when(traineeDao.updateTrainers(1L, Set.of(5L))).thenReturn(List.of(anna));
+        when(trainerDao.findByUsernames(java.util.Set.of("Anna.Brown"))).thenReturn(List.of(anna));
 
         List<Trainer> result = service.updateTrainers(CREDENTIALS, List.of("Anna.Brown"));
 
         assertEquals(List.of(anna), result);
+        verify(traineeDao).updateTrainers(trainee, List.of(anna));
     }
 
     @Test
     void updateTrainers_withUnknownTrainer_throwsAndChangesNothing() {
         givenAuthenticatedTrainee(true);
-        when(trainerDao.findByUsernames(Set.of("nobody"))).thenReturn(List.of());
+        when(trainerDao.findByUsernames(java.util.Set.of("nobody"))).thenReturn(List.of());
 
         assertThrows(NoSuchElementException.class,
                 () -> service.updateTrainers(CREDENTIALS, List.of("nobody")));
-        verify(traineeDao, never()).updateTrainers(anyLong(), anySet());
+        verify(traineeDao, never()).updateTrainers(any(), anyList());
     }
 
     @Test

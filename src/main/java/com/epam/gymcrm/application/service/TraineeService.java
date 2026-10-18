@@ -107,7 +107,7 @@ public class TraineeService {
     @Transactional
     public void delete(Credentials credentials) {
         Trainee trainee = authenticationService.authenticateTrainee(credentials);
-        traineeDao.deleteById(trainee.id());
+        traineeDao.delete(trainee);
         log.info("Deleted trainee username={}", credentials.username());
     }
 
@@ -130,9 +130,8 @@ public class TraineeService {
             requested.removeAll(found);
             throw new NoSuchElementException("Trainers not found: " + requested);
         }
-        Set<Long> ids = trainers.stream().map(Trainer::id).collect(Collectors.toSet());
-        List<Trainer> updated = traineeDao.updateTrainers(trainee.id(), ids);
-        log.info("Updated trainers of trainee username={}, count={}", credentials.username(), updated.size());
-        return updated;
+        traineeDao.updateTrainers(trainee, trainers);
+        log.info("Updated trainers of trainee username={}, count={}", credentials.username(), trainers.size());
+        return trainers;
     }
 }

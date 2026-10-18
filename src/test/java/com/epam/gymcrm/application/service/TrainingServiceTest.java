@@ -55,6 +55,10 @@ class TrainingServiceTest {
         return new Trainee(1L, new User("John", "Smith", "John.Smith", "secret", true), null, null);
     }
 
+    private Training training() {
+        return new Training(1L, trainee(), trainer(), "Yoga", new TrainingType("YOGA"), DATE, 60);
+    }
+
     private NewTraining request(String name, int duration) {
         return new NewTraining("John.Smith", name, new TrainingType("YOGA"), DATE, duration);
     }
@@ -62,7 +66,7 @@ class TrainingServiceTest {
     // ---------- add training ----------
 
     @Test
-    void addTraining_savesTrainingWithIdsOfTraineeAndTrainer() {
+    void addTraining_savesTrainingWithTheTraineeAndTheTrainer() {
         when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS)).thenReturn(trainer());
         when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
         when(trainingDao.save(any(Training.class))).thenAnswer(invocation -> {
@@ -76,8 +80,8 @@ class TrainingServiceTest {
         ArgumentCaptor<Training> captor = ArgumentCaptor.forClass(Training.class);
         verify(trainingDao).save(captor.capture());
         Training saved = captor.getValue();
-        assertEquals(1L, saved.traineeId());
-        assertEquals(5L, saved.trainerId());
+        assertEquals(trainee(), saved.trainee());
+        assertEquals(trainer(), saved.trainer());
         assertEquals("Yoga", saved.trainingName());
         assertEquals("YOGA", saved.trainingType().name());
         assertEquals(DATE, saved.trainingDate());
@@ -149,7 +153,7 @@ class TrainingServiceTest {
     void getTraineeTrainings_passesCriteriaToDao() {
         TraineeTrainingCriteria criteria =
                 new TraineeTrainingCriteria(DATE, LocalDate.of(2026, 12, 31), "Anna", "YOGA");
-        List<Training> trainings = List.of(new Training(1L, 1L, 5L, "Yoga", new TrainingType("YOGA"), DATE, 60));
+        List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainee("John.Smith", criteria)).thenReturn(trainings);
 
         List<Training> result = service.getTraineeTrainings(TRAINEE_CREDENTIALS, criteria);
@@ -178,7 +182,7 @@ class TrainingServiceTest {
     @Test
     void getTrainerTrainings_passesCriteriaToDao() {
         TrainerTrainingCriteria criteria = new TrainerTrainingCriteria(DATE, null, "John");
-        List<Training> trainings = List.of(new Training(1L, 1L, 5L, "Yoga", new TrainingType("YOGA"), DATE, 60));
+        List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainer("Anna.Brown", criteria)).thenReturn(trainings);
 
         List<Training> result = service.getTrainerTrainings(TRAINER_CREDENTIALS, criteria);

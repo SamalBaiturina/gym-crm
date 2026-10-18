@@ -57,7 +57,7 @@ public class TrainingService {
                 .orElseThrow(() -> new NoSuchElementException(
                         "Trainee not found: " + request.traineeUsername()));
 
-        Training saved = trainingDao.save(new Training(null, trainee.id(), trainer.id(), request.name(),
+        Training saved = trainingDao.save(new Training(null, trainee, trainer, request.name(),
                 request.type(), request.date(), request.duration()));
         log.info("Added training id={}", saved.id());
         return saved;

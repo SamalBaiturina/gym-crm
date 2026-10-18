@@ -53,7 +53,7 @@ class GymFacadeTest {
     private final Trainee trainee = new Trainee(1L, new User("John", "Smith", "John.Smith", "p", true), null, null);
     private final Trainer trainer = new Trainer(5L, new User("Anna", "Brown", "Anna.Brown", "p", true),
             new TrainingType("YOGA"));
-    private final Training training = new Training(1L, 1L, 5L, "Yoga", new TrainingType("YOGA"), FROM, 60);
+    private final Training training = new Training(1L, trainee, trainer, "Yoga", new TrainingType("YOGA"), FROM, 60);
 
     @Test
     void createTrainer_delegates() {
