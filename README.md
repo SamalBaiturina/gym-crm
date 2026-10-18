@@ -14,14 +14,15 @@ Manages trainees, trainers and trainings.
 
 Hexagonal (onion) layout, dependencies point towards the domain model:
 
-- `domain.model` - records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`)
-- `application.port.out` - DAO interfaces
-- `application.service` - business logic, authentication, validation, transactions (`@Transactional`)
-- `infrastructure.persistence` - Hibernate DAOs, JPA entities (`entity` package) and the mapper between entities and records
+- `domain.model` - records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`), value objects (`Credentials`, `PasswordChange`, training search criteria) and the `UserProfile` interface shared by trainee and trainer
+- `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs)
+- `application.service` - business logic, authentication, validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
+- `infrastructure.persistence` - Hibernate DAOs (`AbstractProfileDao` is their common base), JPA entities (`entity` package) and one mapper per entity (`mapper` package)
 - `infrastructure.config` - Spring configuration (data source, Hibernate, transactions)
 - `infrastructure.facade` - `GymFacade`, a single entry point for all 18 operations
 
 JPA entities are separate classes in the infrastructure layer, so the domain model stays free of persistence annotations.
+Ports that change data (`delete`, `updateTrainers`, saving a `Training`) take domain objects instead of ids, so a row loaded by a service is not loaded again by the DAO.
 
 ## Database
 
@@ -55,7 +56,15 @@ mvn clean test
 
 - Service and facade tests use Mockito mocks.
 - DAO tests are integration tests on in-memory H2 with the same Hibernate configuration.
+- `QueryCountTest` uses Hibernate statistics to check that the training lists run one query each (no N+1)
+  and that saving a training or changing trainers does not load the trainee and trainers again.
+- `ServiceLoggingTest` checks that failures are logged as warnings with the username.
 - JaCoCo report: `target/site/jacoco/index.html`.
+
+## Logging
+
+- The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on only in tests (`src/test/resources/logback-test.xml`).
+- Failures in the services and DAOs (validation, authentication, entity not found) are logged as WARN with the username or id before the exception is thrown.
 
 ## Operations
 
