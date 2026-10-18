@@ -3,8 +3,10 @@ package com.epam.gymcrm;
 import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.config.AppConfig;
@@ -49,9 +51,11 @@ public class Main {
                     new NewTraining(traineeCredentials.username(), "Morning yoga", new TrainingType("YOGA"),
                             LocalDate.now(), 60));
             log.info("Trainee trainings: {}",
-                    facade.getTraineeTrainings(traineeCredentials, null, null, null, "YOGA"));
+                    facade.getTraineeTrainings(traineeCredentials,
+                            new TraineeTrainingCriteria(null, null, null, "YOGA")));
             log.info("Trainer trainings: {}",
-                    facade.getTrainerTrainings(trainerCredentials, null, null, "John"));
+                    facade.getTrainerTrainings(trainerCredentials,
+                            new TrainerTrainingCriteria(null, null, "John")));
 
             log.info("Trainee active after toggle: {}", facade.toggleTraineeActive(traineeCredentials));
             facade.changeTraineePassword(new PasswordChange(traineeCredentials, "NewPass123"));
@@ -60,7 +64,7 @@ public class Main {
             facade.deleteTrainee(newTraineeCredentials);
             log.info("Trainee still can log in after delete: {}", facade.matchesTrainee(newTraineeCredentials));
             log.info("Trainer trainings after trainee delete: {}",
-                    facade.getTrainerTrainings(trainerCredentials, null, null, null).size());
+                    facade.getTrainerTrainings(trainerCredentials, TrainerTrainingCriteria.any()).size());
         }
     }
 }

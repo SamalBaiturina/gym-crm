@@ -7,8 +7,10 @@ import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
@@ -150,17 +152,18 @@ class GymFacadeTest {
 
     @Test
     void getTraineeTrainings_delegates() {
-        when(trainingService.getTraineeTrainings(CREDENTIALS, FROM, TO, "Anna", "YOGA"))
-                .thenReturn(List.of(training));
+        TraineeTrainingCriteria criteria = new TraineeTrainingCriteria(FROM, TO, "Anna", "YOGA");
+        when(trainingService.getTraineeTrainings(CREDENTIALS, criteria)).thenReturn(List.of(training));
 
-        assertSame(training, facade.getTraineeTrainings(CREDENTIALS, FROM, TO, "Anna", "YOGA").get(0));
+        assertSame(training, facade.getTraineeTrainings(CREDENTIALS, criteria).get(0));
     }
 
     @Test
     void getTrainerTrainings_delegates() {
-        when(trainingService.getTrainerTrainings(CREDENTIALS, FROM, TO, "John")).thenReturn(List.of(training));
+        TrainerTrainingCriteria criteria = new TrainerTrainingCriteria(FROM, TO, "John");
+        when(trainingService.getTrainerTrainings(CREDENTIALS, criteria)).thenReturn(List.of(training));
 
-        assertSame(training, facade.getTrainerTrainings(CREDENTIALS, FROM, TO, "John").get(0));
+        assertSame(training, facade.getTrainerTrainings(CREDENTIALS, criteria).get(0));
     }
 
     @Test

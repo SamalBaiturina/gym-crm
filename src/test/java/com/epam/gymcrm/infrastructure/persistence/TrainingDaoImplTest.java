@@ -3,8 +3,10 @@ package com.epam.gymcrm.infrastructure.persistence;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.support.JpaTestBase;
@@ -120,17 +122,17 @@ class TrainingDaoImplTest extends JpaTestBase {
     @Test
     void findForTrainee_withoutFilters_returnsAllOrderedByDate() {
         List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainee("John.Smith", null, null, null, null));
+                trainingDao.findForTrainee("John.Smith", TraineeTrainingCriteria.any()));
 
         assertEquals(List.of("Yoga basics", "Cardio", "Yoga advanced"), names(result));
     }
 
     @Test
     void findForTrainee_filtersByDateRange_inclusively() {
-        List<Training> february = tx.execute(status -> trainingDao.findForTrainee(
-                "John.Smith", LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28), null, null));
-        List<Training> exactDay = tx.execute(status -> trainingDao.findForTrainee(
-                "John.Smith", LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 10), null, null));
+        List<Training> february = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28), null, null)));
+        List<Training> exactDay = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 10), null, null)));
 
         assertEquals(List.of("Cardio"), names(february));
         assertEquals(List.of("Cardio"), names(exactDay));
@@ -138,32 +140,32 @@ class TrainingDaoImplTest extends JpaTestBase {
 
     @Test
     void findForTrainee_filtersByTrainerName_ignoringCase() {
-        List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainee("John.Smith", null, null, "anna", null));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(null, null, "anna", null)));
 
         assertEquals(List.of("Yoga basics", "Yoga advanced"), names(result));
     }
 
     @Test
     void findForTrainee_filtersByTrainingType() {
-        List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainee("John.Smith", null, null, null, "FITNESS"));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(null, null, null, "FITNESS")));
 
         assertEquals(List.of("Cardio"), names(result));
     }
 
     @Test
     void findForTrainee_combinesFilters() {
-        List<Training> result = tx.execute(status -> trainingDao.findForTrainee(
-                "John.Smith", LocalDate.of(2026, 2, 1), null, "Anna", "YOGA"));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(LocalDate.of(2026, 2, 1), null, "Anna", "YOGA")));
 
         assertEquals(List.of("Yoga advanced"), names(result));
     }
 
     @Test
     void findForTrainee_ignoresBlankFilters() {
-        List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainee("John.Smith", null, null, "  ", ""));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainee("John.Smith",
+                new TraineeTrainingCriteria(null, null, "  ", "")));
 
         assertEquals(3, result.size());
     }
@@ -171,7 +173,7 @@ class TrainingDaoImplTest extends JpaTestBase {
     @Test
     void findForTrainee_withUnknownUsername_returnsEmptyList() {
         assertTrue(tx.execute(status ->
-                trainingDao.findForTrainee("nobody", null, null, null, null)).isEmpty());
+                trainingDao.findForTrainee("nobody", TraineeTrainingCriteria.any())).isEmpty());
     }
 
     // ---------- trainer trainings ----------
@@ -179,23 +181,23 @@ class TrainingDaoImplTest extends JpaTestBase {
     @Test
     void findForTrainer_withoutFilters_returnsAllOrderedByDate() {
         List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainer("Anna.Brown", null, null, null));
+                trainingDao.findForTrainer("Anna.Brown", TrainerTrainingCriteria.any()));
 
         assertEquals(List.of("Yoga basics", "Yoga for Mike", "Yoga advanced"), names(result));
     }
 
     @Test
     void findForTrainer_filtersByTraineeName_ignoringCase() {
-        List<Training> result = tx.execute(status ->
-                trainingDao.findForTrainer("Anna.Brown", null, null, "mike"));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainer("Anna.Brown",
+                new TrainerTrainingCriteria(null, null, "mike")));
 
         assertEquals(List.of("Yoga for Mike"), names(result));
     }
 
     @Test
     void findForTrainer_filtersByDateRange() {
-        List<Training> result = tx.execute(status -> trainingDao.findForTrainer(
-                "Anna.Brown", LocalDate.of(2026, 1, 15), LocalDate.of(2026, 3, 31), null));
+        List<Training> result = tx.execute(status -> trainingDao.findForTrainer("Anna.Brown",
+                new TrainerTrainingCriteria(LocalDate.of(2026, 1, 15), LocalDate.of(2026, 3, 31), null)));
 
         assertEquals(List.of("Yoga for Mike", "Yoga advanced"), names(result));
     }
@@ -203,6 +205,6 @@ class TrainingDaoImplTest extends JpaTestBase {
     @Test
     void findForTrainer_withUnknownUsername_returnsEmptyList() {
         assertTrue(tx.execute(status ->
-                trainingDao.findForTrainer("nobody", null, null, null)).isEmpty());
+                trainingDao.findForTrainer("nobody", TrainerTrainingCriteria.any())).isEmpty());
     }
 }

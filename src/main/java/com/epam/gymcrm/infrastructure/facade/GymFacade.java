@@ -7,12 +7,13 @@ import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -86,14 +87,12 @@ public class GymFacade {
         traineeService.delete(credentials);
     }
 
-    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate from, LocalDate to,
-                                              String trainerName, String trainingTypeName) {
-        return trainingService.getTraineeTrainings(credentials, from, to, trainerName, trainingTypeName);
+    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
+        return trainingService.getTraineeTrainings(credentials, criteria);
     }
 
-    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate from, LocalDate to,
-                                              String traineeName) {
-        return trainingService.getTrainerTrainings(credentials, from, to, traineeName);
+    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
+        return trainingService.getTrainerTrainings(credentials, criteria);
     }
 
     public Training addTraining(Credentials trainerCredentials, NewTraining training) {

@@ -1,6 +1,8 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import com.epam.gymcrm.infrastructure.persistence.entity.TraineeEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
@@ -69,15 +71,19 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
     }
 
     @Override
-    public List<Training> findForTrainee(String traineeUsername, LocalDate from, LocalDate to,
-                                         String trainerName, String trainingTypeName) {
-        return search("trainee", traineeUsername, "trainer", trainerName, from, to, trainingTypeName);
+    public List<Training> findForTrainee(String traineeUsername, TraineeTrainingCriteria criteria) {
+        return search("trainee", traineeUsername, "trainer",
+                new Filters(criteria.from(), criteria.to(), criteria.trainerName(), criteria.trainingType()));
     }
 
     @Override
-    public List<Training> findForTrainer(String trainerUsername, LocalDate from, LocalDate to,
-                                         String traineeName) {
-        return search("trainer", trainerUsername, "trainee", traineeName, from, to, null);
+    public List<Training> findForTrainer(String trainerUsername, TrainerTrainingCriteria criteria) {
+        return search("trainer", trainerUsername, "trainee",
+                new Filters(criteria.from(), criteria.to(), criteria.traineeName(), null));
+    }
+
+    /** Filters shared by both searches; otherName is the first name of the other side of the training. */
+    private record Filters(LocalDate from, LocalDate to, String otherName, String trainingType) {
     }
 
     /**
@@ -85,31 +91,30 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
      * ownerAttribute is the side whose username we search by, otherAttribute is the side filtered by name.
      */
     private List<Training> search(String ownerAttribute, String ownerUsername,
-                                  String otherAttribute, String otherFirstName,
-                                  LocalDate from, LocalDate to, String trainingTypeName) {
+                                  String otherAttribute, Filters filters) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<TrainingEntity> query = cb.createQuery(TrainingEntity.class);
         Root<TrainingEntity> training = query.from(TrainingEntity.class);
         training.fetch("trainingType");
 
-        List<Predicate> filters = new ArrayList<>();
-        filters.add(cb.equal(training.get(ownerAttribute).get("user").get("username"), ownerUsername));
-        if (from != null) {
-            filters.add(cb.greaterThanOrEqualTo(training.<LocalDate>get("date"), from));
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(training.get(ownerAttribute).get("user").get("username"), ownerUsername));
+        if (filters.from() != null) {
+            predicates.add(cb.greaterThanOrEqualTo(training.<LocalDate>get("date"), filters.from()));
         }
-        if (to != null) {
-            filters.add(cb.lessThanOrEqualTo(training.<LocalDate>get("date"), to));
+        if (filters.to() != null) {
+            predicates.add(cb.lessThanOrEqualTo(training.<LocalDate>get("date"), filters.to()));
         }
-        if (hasText(otherFirstName)) {
-            filters.add(cb.equal(
+        if (hasText(filters.otherName())) {
+            predicates.add(cb.equal(
                     cb.lower(training.get(otherAttribute).get("user").<String>get("firstName")),
-                    otherFirstName.toLowerCase()));
+                    filters.otherName().toLowerCase()));
         }
-        if (hasText(trainingTypeName)) {
-            filters.add(cb.equal(training.get("trainingType").get("name"), trainingTypeName));
+        if (hasText(filters.trainingType())) {
+            predicates.add(cb.equal(training.get("trainingType").get("name"), filters.trainingType()));
         }
         query.select(training)
-                .where(filters.toArray(new Predicate[0]))
+                .where(predicates.toArray(new Predicate[0]))
                 .orderBy(cb.asc(training.get("date")));
 
         return entityManager.createQuery(query).getResultList().stream()

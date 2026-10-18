@@ -3,8 +3,10 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
@@ -145,11 +147,12 @@ class TrainingServiceTest {
 
     @Test
     void getTraineeTrainings_passesCriteriaToDao() {
-        LocalDate to = LocalDate.of(2026, 12, 31);
+        TraineeTrainingCriteria criteria =
+                new TraineeTrainingCriteria(DATE, LocalDate.of(2026, 12, 31), "Anna", "YOGA");
         List<Training> trainings = List.of(new Training(1L, 1L, 5L, "Yoga", new TrainingType("YOGA"), DATE, 60));
-        when(trainingDao.findForTrainee("John.Smith", DATE, to, "Anna", "YOGA")).thenReturn(trainings);
+        when(trainingDao.findForTrainee("John.Smith", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTraineeTrainings(TRAINEE_CREDENTIALS, DATE, to, "Anna", "YOGA");
+        List<Training> result = service.getTraineeTrainings(TRAINEE_CREDENTIALS, criteria);
 
         assertSame(trainings, result);
         verify(authenticationService).authenticateTrainee(TRAINEE_CREDENTIALS);
@@ -161,16 +164,24 @@ class TrainingServiceTest {
                 .thenThrow(new AuthenticationException());
 
         assertThrows(AuthenticationException.class,
-                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, null, null, null, null));
+                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, TraineeTrainingCriteria.any()));
+        verifyNoInteractions(trainingDao);
+    }
+
+    @Test
+    void getTraineeTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, null));
         verifyNoInteractions(trainingDao);
     }
 
     @Test
     void getTrainerTrainings_passesCriteriaToDao() {
+        TrainerTrainingCriteria criteria = new TrainerTrainingCriteria(DATE, null, "John");
         List<Training> trainings = List.of(new Training(1L, 1L, 5L, "Yoga", new TrainingType("YOGA"), DATE, 60));
-        when(trainingDao.findForTrainer("Anna.Brown", DATE, null, "John")).thenReturn(trainings);
+        when(trainingDao.findForTrainer("Anna.Brown", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTrainerTrainings(TRAINER_CREDENTIALS, DATE, null, "John");
+        List<Training> result = service.getTrainerTrainings(TRAINER_CREDENTIALS, criteria);
 
         assertSame(trainings, result);
         verify(authenticationService).authenticateTrainer(TRAINER_CREDENTIALS);
@@ -182,7 +193,14 @@ class TrainingServiceTest {
                 .thenThrow(new AuthenticationException());
 
         assertThrows(AuthenticationException.class,
-                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, null, null, null));
+                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, TrainerTrainingCriteria.any()));
+        verifyNoInteractions(trainingDao);
+    }
+
+    @Test
+    void getTrainerTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, null));
         verifyNoInteractions(trainingDao);
     }
 }

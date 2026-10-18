@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -104,6 +105,59 @@ class ModelTest {
         assertFalse(change.toString().contains("secret"));
         assertFalse(change.toString().contains("newPass"));
         assertTrue(change.toString().contains("John.Smith"));
+    }
+
+    @Test
+    void traineeCriteria_anyHasNoFilters() {
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.any();
+
+        assertNull(criteria.from());
+        assertNull(criteria.to());
+        assertNull(criteria.trainerName());
+        assertNull(criteria.trainingType());
+    }
+
+    @Test
+    void traineeCriteria_rejectsPeriodWhereFromIsAfterTo() {
+        LocalDate from = LocalDate.of(2026, 3, 1);
+        LocalDate to = LocalDate.of(2026, 2, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> new TraineeTrainingCriteria(from, to, null, null));
+    }
+
+    @Test
+    void traineeCriteria_acceptsSameDayAndOpenEndedPeriods() {
+        LocalDate day = LocalDate.of(2026, 3, 1);
+
+        assertDoesNotThrow(() -> new TraineeTrainingCriteria(day, day, null, null));
+        assertDoesNotThrow(() -> new TraineeTrainingCriteria(day, null, null, null));
+        assertDoesNotThrow(() -> new TraineeTrainingCriteria(null, day, null, null));
+    }
+
+    @Test
+    void trainerCriteria_anyHasNoFilters() {
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.any();
+
+        assertNull(criteria.from());
+        assertNull(criteria.to());
+        assertNull(criteria.traineeName());
+    }
+
+    @Test
+    void trainerCriteria_rejectsPeriodWhereFromIsAfterTo() {
+        LocalDate from = LocalDate.of(2026, 3, 1);
+        LocalDate to = LocalDate.of(2026, 2, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> new TrainerTrainingCriteria(from, to, null));
+    }
+
+    @Test
+    void trainerCriteria_acceptsSameDayAndOpenEndedPeriods() {
+        LocalDate day = LocalDate.of(2026, 3, 1);
+
+        assertDoesNotThrow(() -> new TrainerTrainingCriteria(day, day, null));
+        assertDoesNotThrow(() -> new TrainerTrainingCriteria(day, null, null));
+        assertDoesNotThrow(() -> new TrainerTrainingCriteria(null, day, null));
     }
 
     @Test

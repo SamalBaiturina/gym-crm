@@ -3,8 +3,10 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -62,19 +63,19 @@ public class TrainingService {
         return saved;
     }
 
-    /** Trainings of the trainee; every filter may be null. */
+    /** Trainings of the trainee, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTraineeTrainings(Credentials credentials, LocalDate from, LocalDate to,
-                                              String trainerName, String trainingTypeName) {
+    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
         authenticationService.authenticateTrainee(credentials);
-        return trainingDao.findForTrainee(credentials.username(), from, to, trainerName, trainingTypeName);
+        Validation.requireNotNull(criteria, "criteria");
+        return trainingDao.findForTrainee(credentials.username(), criteria);
     }
 
-    /** Trainings of the trainer; every filter may be null. */
+    /** Trainings of the trainer, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTrainerTrainings(Credentials credentials, LocalDate from, LocalDate to,
-                                              String traineeName) {
+    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
         authenticationService.authenticateTrainer(credentials);
-        return trainingDao.findForTrainer(credentials.username(), from, to, traineeName);
+        Validation.requireNotNull(criteria, "criteria");
+        return trainingDao.findForTrainer(credentials.username(), criteria);
     }
 }
