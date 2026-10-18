@@ -38,7 +38,9 @@ public abstract class AbstractProfileDao<E, T extends UserProfile<T>> extends Ab
 
     protected abstract E newEntity(T profile);
 
-    /** Copies the fields of the profile into an already existing entity. */
+    /**
+     * Copies the fields of the profile into an already existing entity.
+     */
     protected abstract void copyInto(E entity, T profile);
 
     @Override
@@ -80,6 +82,7 @@ public abstract class AbstractProfileDao<E, T extends UserProfile<T>> extends Ab
     protected E getEntity(Long id) {
         E entity = entityManager.find(entityClass, id);
         if (entity == null) {
+            log.warn("Cannot find {} id={}", role, id);
             throw new NoSuchElementException(role + " not found: " + id);
         }
         return entity;

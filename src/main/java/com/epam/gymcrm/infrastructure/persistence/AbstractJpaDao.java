@@ -4,6 +4,8 @@ import com.epam.gymcrm.application.port.out.UsernameLookup;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainingTypeEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -12,6 +14,8 @@ import java.util.NoSuchElementException;
  * Common base for JPA DAOs: holds the EntityManager and the queries shared by several DAOs.
  */
 public abstract class AbstractJpaDao implements UsernameLookup {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     protected EntityManager entityManager;
 
@@ -34,6 +38,9 @@ public abstract class AbstractJpaDao implements UsernameLookup {
                         "select t from TrainingTypeEntity t where t.name = :name", TrainingTypeEntity.class)
                 .setParameter("name", name)
                 .getResultList().stream().findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Training type not found: " + name));
+                .orElseThrow(() -> {
+                    log.warn("Training type not found: {}", name);
+                    return new NoSuchElementException("Training type not found: " + name);
+                });
     }
 }

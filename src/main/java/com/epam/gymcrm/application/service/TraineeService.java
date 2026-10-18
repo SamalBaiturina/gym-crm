@@ -74,13 +74,16 @@ public class TraineeService extends AbstractProfileService<Trainee> {
     @Transactional
     public List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames) {
         Trainee trainee = authenticate(credentials);
-        Validation.requireNotNull(trainerUsernames, "trainerUsernames");
+        Validation.validated("update trainers of trainee username=" + credentials.username(),
+                () -> Validation.requireNotNull(trainerUsernames, "trainerUsernames"));
 
         Set<String> requested = new HashSet<>(trainerUsernames);
         List<Trainer> trainers = trainerDao.findByUsernames(requested);
         if (trainers.size() != requested.size()) {
             Set<String> found = trainers.stream().map(t -> t.user().username()).collect(Collectors.toSet());
             requested.removeAll(found);
+            log.warn("Cannot update trainers of trainee username={}: trainers not found {}",
+                    credentials.username(), requested);
             throw new NoSuchElementException("Trainers not found: " + requested);
         }
         traineeDao.updateTrainers(trainee, trainers);

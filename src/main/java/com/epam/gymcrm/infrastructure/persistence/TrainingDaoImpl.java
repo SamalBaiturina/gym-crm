@@ -28,7 +28,9 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingDaoImpl.class);
 
-    /** Loads the training together with both sides, so mapping to the domain needs no extra queries. */
+    /**
+     * Loads the training together with both sides, so mapping to the domain needs no extra queries.
+     */
     private static final String SELECT_TRAINING = "select t from TrainingEntity t "
             + "join fetch t.trainingType "
             + "join fetch t.trainee te join fetch te.user "
@@ -40,10 +42,13 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
         this.trainingMapper = trainingMapper;
     }
 
-    /** The trainee and the trainer of the training must already be persisted. */
+    /**
+     * The trainee and the trainer of the training must already be persisted.
+     */
     @Override
     public Training save(Training training) {
         if (training.id() != null) {
+            log.warn("Cannot save training id={}: updating a training is not supported", training.id());
             throw new IllegalArgumentException("Updating a training is not supported");
         }
         // references carry only the id: enough for the foreign keys, and no SELECT is needed
@@ -85,7 +90,9 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
                 new Filters(criteria.from(), criteria.to(), criteria.traineeName(), null));
     }
 
-    /** Filters shared by both searches; otherName is the first name of the other side of the training. */
+    /**
+     * Filters shared by both searches; otherName is the first name of the other side of the training.
+     */
     private record Filters(LocalDate from, LocalDate to, String otherName, String trainingType) {
     }
 
@@ -125,7 +132,9 @@ public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
                 .toList();
     }
 
-    /** Same fetches as SELECT_TRAINING, for the Criteria query. */
+    /**
+     * Same fetches as SELECT_TRAINING, for the Criteria query.
+     */
     private static void fetchAll(Root<TrainingEntity> training) {
         training.fetch("trainingType");
         Fetch<TrainingEntity, TraineeEntity> trainee = training.fetch("trainee");

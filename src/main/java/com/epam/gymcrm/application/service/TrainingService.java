@@ -45,21 +45,28 @@ public class TrainingService {
     @Transactional
     public Training addTraining(Credentials trainerCredentials, NewTraining request) {
         Trainer trainer = authenticationService.authenticateTrainer(trainerCredentials);
-        Validation.requireNotNull(request, "training");
-        Validation.requireText(request.traineeUsername(), "traineeUsername");
-        Validation.requireText(request.name(), "trainingName");
-        Validation.requireNotNull(request.type(), "trainingType");
-        Validation.requireText(request.type().name(), "trainingType");
-        Validation.requireNotNull(request.date(), "trainingDate");
-        Validation.requirePositive(request.duration(), "trainingDuration");
+        String trainerUsername = trainerCredentials.username();
+        Validation.validated("add training by trainer username=" + trainerUsername, () -> {
+            Validation.requireNotNull(request, "training");
+            Validation.requireText(request.traineeUsername(), "traineeUsername");
+            Validation.requireText(request.name(), "trainingName");
+            Validation.requireNotNull(request.type(), "trainingType");
+            Validation.requireText(request.type().name(), "trainingType");
+            Validation.requireNotNull(request.date(), "trainingDate");
+            Validation.requirePositive(request.duration(), "trainingDuration");
+        });
 
         Trainee trainee = traineeDao.findByUsername(request.traineeUsername())
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Trainee not found: " + request.traineeUsername()));
+                .orElseThrow(() -> {
+                    log.warn("Cannot add training: trainee username={} not found (trainer username={})",
+                            request.traineeUsername(), trainerUsername);
+                    return new NoSuchElementException("Trainee not found: " + request.traineeUsername());
+                });
 
         Training saved = trainingDao.save(new Training(null, trainee, trainer, request.name(),
                 request.type(), request.date(), request.duration()));
-        log.info("Added training id={}", saved.id());
+        log.info("Added training id={}, trainer={}, trainee={}",
+                saved.id(), trainerUsername, request.traineeUsername());
         return saved;
     }
 
@@ -67,7 +74,8 @@ public class TrainingService {
     @Transactional(readOnly = true)
     public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
         authenticationService.authenticateTrainee(credentials);
-        Validation.requireNotNull(criteria, "criteria");
+        Validation.validated("get trainings of trainee username=" + credentials.username(),
+                () -> Validation.requireNotNull(criteria, "criteria"));
         return trainingDao.findForTrainee(credentials.username(), criteria);
     }
 
@@ -75,7 +83,8 @@ public class TrainingService {
     @Transactional(readOnly = true)
     public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
         authenticationService.authenticateTrainer(credentials);
-        Validation.requireNotNull(criteria, "criteria");
+        Validation.validated("get trainings of trainer username=" + credentials.username(),
+                () -> Validation.requireNotNull(criteria, "criteria"));
         return trainingDao.findForTrainer(credentials.username(), criteria);
     }
 }

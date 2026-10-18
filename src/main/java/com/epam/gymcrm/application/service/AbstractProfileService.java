@@ -63,7 +63,7 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
     /** Creates a profile; username and password are generated. */
     @Transactional
     public T create(T profile) {
-        validate(profile);
+        validate(profile, "create " + role);
         User user = profile.user();
         String username = usernameGenerator.generate(user.firstName(), user.lastName());
         String password = passwordGenerator.generate();
@@ -88,7 +88,7 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
     @Transactional
     public T update(Credentials credentials, T changes) {
         T existing = authenticate(credentials);
-        validate(changes);
+        validate(changes, "update " + role + " username=" + credentials.username());
         User user = existing.user().withNames(changes.user().firstName(), changes.user().lastName());
         T saved = dao().save(applyChanges(existing.withUser(user), changes));
         log.info("Updated {} username={}", role, credentials.username());
@@ -101,13 +101,15 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
         T profile = authenticate(credentials);
         boolean active = !profile.user().isActive();
         dao().save(profile.withUser(profile.user().withActive(active)));
-        log.info("{} username={} is now active={}", role, credentials.username(), active);
+        log.info("Set active={} for {} username={}", active, role, credentials.username());
         return active;
     }
 
-    private void validate(T profile) {
-        Validation.requireNotNull(profile, role);
-        Validation.requireUser(profile.user());
-        validateDetails(profile);
+    private void validate(T profile, String context) {
+        Validation.validated(context, () -> {
+            Validation.requireNotNull(profile, role);
+            Validation.requireUser(profile.user());
+            validateDetails(profile);
+        });
     }
 }
