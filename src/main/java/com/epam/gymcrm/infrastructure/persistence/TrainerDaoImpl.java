@@ -3,21 +3,14 @@ package com.epam.gymcrm.infrastructure.persistence;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
-import com.epam.gymcrm.infrastructure.persistence.entity.TrainingTypeEntity;
 import com.epam.gymcrm.infrastructure.persistence.mapper.TrainerMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Repository
-public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
-
-    private static final Logger log = LoggerFactory.getLogger(TrainerDaoImpl.class);
+public class TrainerDaoImpl extends AbstractProfileDao<TrainerEntity, Trainer> implements TrainerDao {
 
     private static final String SELECT_TRAINER =
             "select t from TrainerEntity t join fetch t.user u join fetch t.specialization ";
@@ -25,39 +18,23 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
     private final TrainerMapper trainerMapper;
 
     public TrainerDaoImpl(TrainerMapper trainerMapper) {
+        super(TrainerEntity.class, "trainer", SELECT_TRAINER);
         this.trainerMapper = trainerMapper;
     }
 
     @Override
-    public Trainer save(Trainer trainer) {
-        TrainingTypeEntity specialization = findTrainingType(trainer.specialization().name());
-        if (trainer.id() == null) {
-            TrainerEntity entity = trainerMapper.toEntity(trainer, specialization);
-            entityManager.persist(entity);
-            log.debug("Persisted trainer id={}", entity.getId());
-            return trainerMapper.toDomain(entity);
-        }
-        TrainerEntity entity = entityManager.find(TrainerEntity.class, trainer.id());
-        if (entity == null) {
-            throw new NoSuchElementException("Trainer not found: " + trainer.id());
-        }
-        trainerMapper.update(entity, trainer, specialization);
-        log.debug("Updated trainer id={}", entity.getId());
+    protected Trainer toDomain(TrainerEntity entity) {
         return trainerMapper.toDomain(entity);
     }
 
     @Override
-    public Optional<Trainer> findById(Long id) {
-        return Optional.ofNullable(entityManager.find(TrainerEntity.class, id))
-                .map(trainerMapper::toDomain);
+    protected TrainerEntity newEntity(Trainer trainer) {
+        return trainerMapper.toEntity(trainer, findTrainingType(trainer.specialization().name()));
     }
 
     @Override
-    public Optional<Trainer> findByUsername(String username) {
-        return entityManager.createQuery(SELECT_TRAINER + "where u.username = :username", TrainerEntity.class)
-                .setParameter("username", username)
-                .getResultList().stream().findFirst()
-                .map(trainerMapper::toDomain);
+    protected void copyInto(TrainerEntity entity, Trainer trainer) {
+        trainerMapper.update(entity, trainer, findTrainingType(trainer.specialization().name()));
     }
 
     @Override
@@ -68,15 +45,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
         return entityManager.createQuery(SELECT_TRAINER + "where u.username in :usernames", TrainerEntity.class)
                 .setParameter("usernames", usernames)
                 .getResultList().stream()
-                .map(trainerMapper::toDomain)
-                .toList();
-    }
-
-    @Override
-    public List<Trainer> findAll() {
-        return entityManager.createQuery(SELECT_TRAINER, TrainerEntity.class)
-                .getResultList().stream()
-                .map(trainerMapper::toDomain)
+                .map(this::toDomain)
                 .toList();
     }
 
@@ -88,7 +57,7 @@ public class TrainerDaoImpl extends AbstractJpaDao implements TrainerDao {
                         TrainerEntity.class)
                 .setParameter("username", traineeUsername)
                 .getResultList().stream()
-                .map(trainerMapper::toDomain)
+                .map(this::toDomain)
                 .toList();
     }
 }

@@ -4,11 +4,8 @@ import com.epam.gymcrm.domain.model.Trainer;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
-public interface TrainerDao extends BaseDao<Trainer>, UsernameLookup {
-
-    Optional<Trainer> findByUsername(String username);
+public interface TrainerDao extends ProfileDao<Trainer> {
 
     List<Trainer> findByUsernames(Collection<String> usernames);
 

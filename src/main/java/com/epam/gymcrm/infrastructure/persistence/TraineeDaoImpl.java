@@ -11,13 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
-public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
+public class TraineeDaoImpl extends AbstractProfileDao<TraineeEntity, Trainee> implements TraineeDao {
 
     private static final Logger log = LoggerFactory.getLogger(TraineeDaoImpl.class);
 
@@ -26,43 +24,23 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
     private final TraineeMapper traineeMapper;
 
     public TraineeDaoImpl(TraineeMapper traineeMapper) {
+        super(TraineeEntity.class, "trainee", SELECT_TRAINEE);
         this.traineeMapper = traineeMapper;
     }
 
     @Override
-    public Trainee save(Trainee trainee) {
-        if (trainee.id() == null) {
-            TraineeEntity entity = traineeMapper.toEntity(trainee);
-            entityManager.persist(entity);
-            log.debug("Persisted trainee id={}", entity.getId());
-            return traineeMapper.toDomain(entity);
-        }
-        TraineeEntity entity = getEntity(trainee.id());
-        traineeMapper.update(entity, trainee);
-        log.debug("Updated trainee id={}", entity.getId());
+    protected Trainee toDomain(TraineeEntity entity) {
         return traineeMapper.toDomain(entity);
     }
 
     @Override
-    public Optional<Trainee> findById(Long id) {
-        return Optional.ofNullable(entityManager.find(TraineeEntity.class, id))
-                .map(traineeMapper::toDomain);
+    protected TraineeEntity newEntity(Trainee trainee) {
+        return traineeMapper.toEntity(trainee);
     }
 
     @Override
-    public Optional<Trainee> findByUsername(String username) {
-        return entityManager.createQuery(SELECT_TRAINEE + "where u.username = :username", TraineeEntity.class)
-                .setParameter("username", username)
-                .getResultList().stream().findFirst()
-                .map(traineeMapper::toDomain);
-    }
-
-    @Override
-    public List<Trainee> findAll() {
-        return entityManager.createQuery(SELECT_TRAINEE, TraineeEntity.class)
-                .getResultList().stream()
-                .map(traineeMapper::toDomain)
-                .toList();
+    protected void copyInto(TraineeEntity entity, Trainee trainee) {
+        traineeMapper.update(entity, trainee);
     }
 
     @Override
@@ -85,13 +63,5 @@ public class TraineeDaoImpl extends AbstractJpaDao implements TraineeDao {
         entity.getTrainers().clear();
         entity.getTrainers().addAll(references);
         log.debug("Trainee id={} now has {} trainers", trainee.id(), references.size());
-    }
-
-    private TraineeEntity getEntity(Long id) {
-        TraineeEntity entity = entityManager.find(TraineeEntity.class, id);
-        if (entity == null) {
-            throw new NoSuchElementException("Trainee not found: " + id);
-        }
-        return entity;
     }
 }

@@ -4,11 +4,8 @@ import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 
 import java.util.List;
-import java.util.Optional;
 
-public interface TraineeDao extends BaseDao<Trainee>, UsernameLookup {
-
-    Optional<Trainee> findByUsername(String username);
+public interface TraineeDao extends ProfileDao<Trainee> {
 
     /** Removes the trainee together with the user and the trainings (cascade). */
     void delete(Trainee trainee);
