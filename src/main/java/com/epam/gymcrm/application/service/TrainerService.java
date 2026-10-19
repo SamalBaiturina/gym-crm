@@ -1,65 +1,45 @@
 package com.epam.gymcrm.application.service;
 
+import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainer;
-import com.epam.gymcrm.domain.model.User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-
 @Service
-public class TrainerService {
-
-    private static final Logger log = LoggerFactory.getLogger(TrainerService.class);
+public class TrainerService extends AbstractProfileService<Trainer> {
 
     private TrainerDao trainerDao;
-    private UsernameGenerator usernameGenerator;
-    private PasswordGenerator passwordGenerator;
+
+    public TrainerService() {
+        super("trainer");
+    }
 
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
     }
 
-    @Autowired
-    public void setUsernameGenerator(UsernameGenerator usernameGenerator) {
-        this.usernameGenerator = usernameGenerator;
+    @Override
+    protected ProfileDao<Trainer> dao() {
+        return trainerDao;
     }
 
-    @Autowired
-    public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
-        this.passwordGenerator = passwordGenerator;
+    @Override
+    protected Trainer authenticate(Credentials credentials) {
+        return authentication().authenticateTrainer(credentials);
     }
 
-    public Trainer create(Trainer trainer) {
-        User user = trainer.user();
-        String username = usernameGenerator.generate(user.firstName(), user.lastName());
-        String password = passwordGenerator.generate();
-        Trainer saved = trainerDao.save(trainer.withUser(user.withCredentials(username, password)));
-        log.info("Created trainer id={}, username={}", saved.id(), username);
-        return saved;
+    /** The specialization is the trainer's own field. */
+    @Override
+    protected Trainer applyChanges(Trainer existing, Trainer changes) {
+        return new Trainer(existing.id(), existing.user(), changes.specialization());
     }
 
-    public Trainer update(Trainer trainer) {
-        if (trainer.id() == null || trainerDao.findById(trainer.id()).isEmpty()) {
-            log.warn("Trainer not found for update, id={}", trainer.id());
-            throw new NoSuchElementException("Trainer not found: " + trainer.id());
-        }
-        Trainer saved = trainerDao.save(trainer);
-        log.info("Updated trainer id={}", saved.id());
-        return saved;
-    }
-
-    public Optional<Trainer> findById(Long id) {
-        return trainerDao.findById(id);
-    }
-
-    public List<Trainer> findAll() {
-        return trainerDao.findAll();
+    @Override
+    protected void validateDetails(Trainer trainer) {
+        Validation.requireNotNull(trainer.specialization(), "specialization");
+        Validation.requireText(trainer.specialization().name(), "specialization");
     }
 }

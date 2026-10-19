@@ -1,8 +1,12 @@
 package com.epam.gymcrm;
 
+import com.epam.gymcrm.application.service.NewTraining;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
-import com.epam.gymcrm.domain.model.Training;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.config.AppConfig;
@@ -12,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class Main {
 
@@ -21,20 +26,45 @@ public class Main {
         try (var context = new AnnotationConfigApplicationContext(AppConfig.class)) {
             GymFacade facade = context.getBean(GymFacade.class);
 
-            Trainee created = facade.createTrainee(
-                    new Trainee(null, User.of("John", "Smith"), LocalDate.of(2000, 1, 1), "Astana"));
-            log.info("Trainee created: {}", created);
-
             Trainer trainer = facade.createTrainer(
                     new Trainer(null, User.of("Anna", "Brown"), new TrainingType("YOGA")));
-            log.info("Trainer created: {}", trainer);
+            Trainee trainee = facade.createTrainee(
+                    new Trainee(null, User.of("John", "Smith"), LocalDate.of(2000, 1, 1), "Astana"));
+            log.info("Created: {} and {}", trainer, trainee);
 
-            Training training = facade.createTraining(new Training(null, created.id(), trainer.id(),
-                    "Test session", new TrainingType("YOGA"), LocalDate.now(), 60));
-            log.info("Training created: {}", training);
+            Credentials trainerCredentials =
+                    new Credentials(trainer.user().username(), trainer.user().password());
+            Credentials traineeCredentials =
+                    new Credentials(trainee.user().username(), trainee.user().password());
 
-            facade.deleteTrainee(created.id());
-            log.info("Trainees left: {}", facade.getAllTrainees().size());
+            log.info("Credentials match: {}", facade.matchesTrainee(traineeCredentials));
+            log.info("Wrong password matches: {}",
+                    facade.matchesTrainee(new Credentials(traineeCredentials.username(), "wrong")));
+
+            log.info("Not assigned trainers: {}",
+                    facade.getNotAssignedTrainers(traineeCredentials).size());
+            facade.updateTraineeTrainers(traineeCredentials, List.of(trainerCredentials.username()));
+            log.info("Not assigned trainers after assigning: {}",
+                    facade.getNotAssignedTrainers(traineeCredentials).size());
+
+            facade.addTraining(trainerCredentials,
+                    new NewTraining(traineeCredentials.username(), "Morning yoga", new TrainingType("YOGA"),
+                            LocalDate.now(), 60));
+            log.info("Trainee trainings: {}",
+                    facade.getTraineeTrainings(traineeCredentials,
+                            new TraineeTrainingCriteria(null, null, null, "YOGA")));
+            log.info("Trainer trainings: {}",
+                    facade.getTrainerTrainings(trainerCredentials,
+                            new TrainerTrainingCriteria(null, null, "John")));
+
+            log.info("Trainee active after toggle: {}", facade.toggleTraineeActive(traineeCredentials));
+            facade.changeTraineePassword(new PasswordChange(traineeCredentials, "NewPass123"));
+
+            Credentials newTraineeCredentials = new Credentials(traineeCredentials.username(), "NewPass123");
+            facade.deleteTrainee(newTraineeCredentials);
+            log.info("Trainee still can log in after delete: {}", facade.matchesTrainee(newTraineeCredentials));
+            log.info("Trainer trainings after trainee delete: {}",
+                    facade.getTrainerTrainings(trainerCredentials, TrainerTrainingCriteria.any()).size());
         }
     }
 }

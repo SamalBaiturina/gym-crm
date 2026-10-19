@@ -1,17 +1,21 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
+import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Service
 public class TrainingService {
@@ -20,7 +24,7 @@ public class TrainingService {
 
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
-    private TrainerDao trainerDao;
+    private AuthenticationService authenticationService;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -33,29 +37,54 @@ public class TrainingService {
     }
 
     @Autowired
-    public void setTrainerDao(TrainerDao trainerDao) {
-        this.trainerDao = trainerDao;
+    public void setAuthenticationService(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
     }
 
-    public Training create(Training training) {
-        if (traineeDao.findById(training.traineeId()).isEmpty()) {
-            log.warn("Trainee not found, id={}", training.traineeId());
-            throw new NoSuchElementException("Trainee not found: " + training.traineeId());
-        }
-        if (trainerDao.findById(training.trainerId()).isEmpty()) {
-            log.warn("Trainer not found, id={}", training.trainerId());
-            throw new NoSuchElementException("Trainer not found: " + training.trainerId());
-        }
-        Training saved = trainingDao.save(training);
-        log.info("Created training id={}", saved.id());
+    /** The authenticated trainer adds a training with the given trainee. */
+    @Transactional
+    public Training addTraining(Credentials trainerCredentials, NewTraining request) {
+        Trainer trainer = authenticationService.authenticateTrainer(trainerCredentials);
+        String trainerUsername = trainerCredentials.username();
+        Validation.validated("add training by trainer username=" + trainerUsername, () -> {
+            Validation.requireNotNull(request, "training");
+            Validation.requireText(request.traineeUsername(), "traineeUsername");
+            Validation.requireText(request.name(), "trainingName");
+            Validation.requireNotNull(request.type(), "trainingType");
+            Validation.requireText(request.type().name(), "trainingType");
+            Validation.requireNotNull(request.date(), "trainingDate");
+            Validation.requirePositive(request.duration(), "trainingDuration");
+        });
+
+        Trainee trainee = traineeDao.findByUsername(request.traineeUsername())
+                .orElseThrow(() -> {
+                    log.warn("Cannot add training: trainee username={} not found (trainer username={})",
+                            request.traineeUsername(), trainerUsername);
+                    return new NoSuchElementException("Trainee not found: " + request.traineeUsername());
+                });
+
+        Training saved = trainingDao.save(new Training(null, trainee, trainer, request.name(),
+                request.type(), request.date(), request.duration()));
+        log.info("Added training id={}, trainer={}, trainee={}",
+                saved.id(), trainerUsername, request.traineeUsername());
         return saved;
     }
 
-    public Optional<Training> findById(Long id) {
-        return trainingDao.findById(id);
+    /** Trainings of the trainee, narrowed by the optional criteria. */
+    @Transactional(readOnly = true)
+    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
+        authenticationService.authenticateTrainee(credentials);
+        Validation.validated("get trainings of trainee username=" + credentials.username(),
+                () -> Validation.requireNotNull(criteria, "criteria"));
+        return trainingDao.findForTrainee(credentials.username(), criteria);
     }
 
-    public List<Training> findAll() {
-        return trainingDao.findAll();
+    /** Trainings of the trainer, narrowed by the optional criteria. */
+    @Transactional(readOnly = true)
+    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
+        authenticationService.authenticateTrainer(credentials);
+        Validation.validated("get trainings of trainer username=" + credentials.username(),
+                () -> Validation.requireNotNull(criteria, "criteria"));
+        return trainingDao.findForTrainer(credentials.username(), criteria);
     }
 }

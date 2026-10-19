@@ -1,75 +1,109 @@
 package com.epam.gymcrm.infrastructure.facade;
 
+import com.epam.gymcrm.application.service.AuthenticationService;
+import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 
+/**
+ * Single entry point for all operations of the application; only delegates to the services.
+ */
 @Component
 public class GymFacade {
 
     private final TraineeService traineeService;
     private final TrainerService trainerService;
     private final TrainingService trainingService;
+    private final AuthenticationService authenticationService;
 
     public GymFacade(TraineeService traineeService, TrainerService trainerService,
-                     TrainingService trainingService) {
+                     TrainingService trainingService, AuthenticationService authenticationService) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
-    }
-
-    public Trainee createTrainee(Trainee trainee) {
-        return traineeService.create(trainee);
-    }
-
-    public Trainee updateTrainee(Trainee trainee) {
-        return traineeService.update(trainee);
-    }
-
-    public void deleteTrainee(Long id) {
-        traineeService.delete(id);
-    }
-
-    public Optional<Trainee> getTrainee(Long id) {
-        return traineeService.findById(id);
-    }
-
-    public List<Trainee> getAllTrainees() {
-        return traineeService.findAll();
+        this.authenticationService = authenticationService;
     }
 
     public Trainer createTrainer(Trainer trainer) {
         return trainerService.create(trainer);
     }
 
-    public Trainer updateTrainer(Trainer trainer) {
-        return trainerService.update(trainer);
+    public Trainee createTrainee(Trainee trainee) {
+        return traineeService.create(trainee);
     }
 
-    public Optional<Trainer> getTrainer(Long id) {
-        return trainerService.findById(id);
+    public boolean matchesTrainee(Credentials credentials) {
+        return authenticationService.matchesTrainee(credentials);
     }
 
-    public List<Trainer> getAllTrainers() {
-        return trainerService.findAll();
+    public boolean matchesTrainer(Credentials credentials) {
+        return authenticationService.matchesTrainer(credentials);
     }
 
-    public Training createTraining(Training training) {
-        return trainingService.create(training);
+    public Trainer getTrainer(Credentials credentials) {
+        return trainerService.getByUsername(credentials);
     }
 
-    public Optional<Training> getTraining(Long id) {
-        return trainingService.findById(id);
+    public Trainee getTrainee(Credentials credentials) {
+        return traineeService.getByUsername(credentials);
     }
 
-    public List<Training> getAllTrainings() {
-        return trainingService.findAll();
+    public void changeTraineePassword(PasswordChange change) {
+        traineeService.changePassword(change);
+    }
+
+    public void changeTrainerPassword(PasswordChange change) {
+        trainerService.changePassword(change);
+    }
+
+    public Trainer updateTrainer(Credentials credentials, Trainer changes) {
+        return trainerService.update(credentials, changes);
+    }
+
+    public Trainee updateTrainee(Credentials credentials, Trainee changes) {
+        return traineeService.update(credentials, changes);
+    }
+
+    public boolean toggleTraineeActive(Credentials credentials) {
+        return traineeService.toggleActive(credentials);
+    }
+
+    public boolean toggleTrainerActive(Credentials credentials) {
+        return trainerService.toggleActive(credentials);
+    }
+
+    public void deleteTrainee(Credentials credentials) {
+        traineeService.delete(credentials);
+    }
+
+    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
+        return trainingService.getTraineeTrainings(credentials, criteria);
+    }
+
+    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
+        return trainingService.getTrainerTrainings(credentials, criteria);
+    }
+
+    public Training addTraining(Credentials trainerCredentials, NewTraining training) {
+        return trainingService.addTraining(trainerCredentials, training);
+    }
+
+    public List<Trainer> getNotAssignedTrainers(Credentials traineeCredentials) {
+        return traineeService.getNotAssignedTrainers(traineeCredentials);
+    }
+
+    public List<Trainer> updateTraineeTrainers(Credentials credentials, List<String> trainerUsernames) {
+        return traineeService.updateTrainers(credentials, trainerUsernames);
     }
 }
