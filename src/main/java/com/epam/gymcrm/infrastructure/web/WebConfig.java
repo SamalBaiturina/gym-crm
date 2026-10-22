@@ -11,11 +11,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * Spring MVC setup: finds the controllers and makes JSON write dates as "2000-01-01".
+ * Spring MVC setup: finds the controllers and the error handler,
+ * and makes JSON write dates as "2000-01-01".
  */
 @Configuration
 @EnableWebMvc
-@ComponentScan("com.epam.gymcrm.infrastructure.web.controller")
+@ComponentScan({"com.epam.gymcrm.infrastructure.web.controller", "com.epam.gymcrm.infrastructure.web.error"})
 public class WebConfig implements WebMvcConfigurer {
 
     @Override

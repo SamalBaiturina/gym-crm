@@ -1,5 +1,7 @@
 package com.epam.gymcrm.domain.model;
 
+import com.epam.gymcrm.domain.exception.ValidationException;
+
 import java.time.LocalDate;
 
 /**
@@ -9,7 +11,7 @@ public record TraineeTrainingCriteria(LocalDate from, LocalDate to, String train
 
     public TraineeTrainingCriteria {
         if (from != null && to != null && from.isAfter(to)) {
-            throw new IllegalArgumentException("from must not be after to");
+            throw new ValidationException("from must not be after to");
         }
     }
 

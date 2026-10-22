@@ -2,6 +2,7 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 public class TrainingService {
@@ -60,7 +60,7 @@ public class TrainingService {
                 .orElseThrow(() -> {
                     log.warn("Cannot add training: trainee username={} not found (trainer username={})",
                             request.traineeUsername(), trainerUsername);
-                    return new NoSuchElementException("Trainee not found: " + request.traineeUsername());
+                    return new NotFoundException("Trainee not found: " + request.traineeUsername());
                 });
 
         Training saved = trainingDao.save(new Training(null, trainee, trainer, request.name(),

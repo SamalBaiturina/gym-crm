@@ -1,9 +1,8 @@
-package com.epam.gymcrm.infrastructure.web.controller;
+package com.epam.gymcrm.infrastructure.web;
 
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.User;
-import com.epam.gymcrm.infrastructure.web.WebConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -84,7 +84,7 @@ public class TraineeService extends AbstractProfileService<Trainee> {
             requested.removeAll(found);
             log.warn("Cannot update trainers of trainee username={}: trainers not found {}",
                     credentials.username(), requested);
-            throw new NoSuchElementException("Trainers not found: " + requested);
+            throw new NotFoundException("Trainers not found: " + requested);
         }
         traineeDao.updateTrainers(trainee, trainers);
         log.info("Updated trainers of trainee username={}, count={}", credentials.username(), trainers.size());
