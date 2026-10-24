@@ -7,6 +7,7 @@ import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.infrastructure.web.dto.ActivationRequest;
 import com.epam.gymcrm.infrastructure.web.dto.CredentialsResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TrainerProfileResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TrainerRegistrationRequest;
@@ -17,6 +18,7 @@ import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -69,6 +71,13 @@ public class TrainerController {
                                          @Valid @RequestBody UpdateTrainerRequest request) {
         return TrainerProfileResponse.from(trainerService.updateProfile(
                 user.credentials(), request.firstName(), request.lastName(), request.isActive()));
+    }
+
+    /** Sets the trainer's active flag to the value from the request; repeating the call is harmless. */
+    @PatchMapping("/{username}/active")
+    public void setActive(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
+                          @Valid @RequestBody ActivationRequest request) {
+        trainerService.setActive(user.credentials(), request.isActive());
     }
 
     /** Trainings of the trainer. All parameters are optional: dates as yyyy-MM-dd and the trainee's first name. */

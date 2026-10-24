@@ -5,6 +5,7 @@ import com.epam.gymcrm.application.service.TrainingService;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.infrastructure.web.dto.ActivationRequest;
 import com.epam.gymcrm.infrastructure.web.dto.CredentialsResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TraineeProfileResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TraineeRegistrationRequest;
@@ -19,6 +20,7 @@ import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -81,6 +83,13 @@ public class TraineeController {
     @DeleteMapping("/{username}")
     public void delete(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
         traineeService.delete(user.credentials());
+    }
+
+    /** Sets the trainee's active flag to the value from the request; repeating the call is harmless. */
+    @PatchMapping("/{username}/active")
+    public void setActive(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
+                          @Valid @RequestBody ActivationRequest request) {
+        traineeService.setActive(user.credentials(), request.isActive());
     }
 
     /** Active trainers that are not assigned to the trainee yet. */
