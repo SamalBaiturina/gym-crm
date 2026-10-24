@@ -4,6 +4,7 @@ import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.UserProfile;
@@ -53,6 +54,19 @@ public class AuthenticationService {
     @Transactional(readOnly = true)
     public Trainer authenticateTrainer(Credentials credentials) {
         return authenticate(trainerDao, "Trainer", credentials);
+    }
+
+        /** Finds out who is calling: returns the role if the credentials are valid, otherwise throws. */
+    @Transactional(readOnly = true)
+    public Role authenticate(Credentials credentials) {
+        if (matchesTrainee(credentials)) {
+            return Role.TRAINEE;
+        }
+        if (matchesTrainer(credentials)) {
+            return Role.TRAINER;
+        }
+        log.warn("Authentication failed for username={}", credentials.username());
+        throw new AuthenticationException();
     }
 
     private <T extends UserProfile<T>> Optional<T> find(ProfileDao<T> dao, Credentials credentials) {

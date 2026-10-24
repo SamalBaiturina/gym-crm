@@ -3,6 +3,7 @@ package com.epam.gymcrm.infrastructure.web.error;
 import com.epam.gymcrm.application.service.AuthenticationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
+import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"gym-crm\"")
                 .body(new ApiError("UNAUTHORIZED", List.of(e.getMessage())));
+    }
+
+        @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiError("FORBIDDEN", List.of(e.getMessage())));
     }
 
     /** Anything unexpected: the stack trace goes to the log, the client gets a general message. */

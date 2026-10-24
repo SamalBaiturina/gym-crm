@@ -4,6 +4,7 @@ import com.epam.gymcrm.application.service.AuthenticationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.infrastructure.web.error.GlobalExceptionHandler;
+import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,6 +89,11 @@ class GlobalExceptionHandlerTest {
         @PostMapping("/body")
         public void body(@Valid @RequestBody Payload payload) {
         }
+
+        @GetMapping("/forbidden")
+        public void forbidden() {
+            throw new AccessDeniedException("Access to another user's data is not allowed");
+        }
     }
 
     public record Payload(@NotBlank String name) {
@@ -162,5 +168,13 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(post("/test/validation"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.type").value("METHOD_NOT_ALLOWED"));
+    }
+
+    @Test
+    void accessDeniedExceptionIs403() throws Exception {
+        mockMvc.perform(get("/test/forbidden"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.details[0]").value("Access to another user's data is not allowed"));
     }
 }
