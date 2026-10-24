@@ -1,6 +1,7 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
+import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.Credentials;
@@ -25,6 +26,7 @@ public class TrainingService {
 
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
+    private TrainerDao trainerDao;
     private AuthenticationService authenticationService;
 
     @Autowired
@@ -35,6 +37,11 @@ public class TrainingService {
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;
+    }
+
+    @Autowired
+    public void setTrainerDao(TrainerDao trainerDao) {
+        this.trainerDao = trainerDao;
     }
 
     @Autowired
@@ -71,6 +78,34 @@ public class TrainingService {
         return saved;
     }
 
+    /**
+     * Adds a training between the trainee and the trainer found by username. The training type is
+     * the trainer's specialization. The caller has already been authenticated and checked by the
+     * web layer, so no credentials are passed here.
+     */
+    @Transactional
+    public Training addTraining(AddTrainingCommand command) {
+        Validation.validated("add training", () -> {
+            Validation.requireNotNull(command, "training");
+            Validation.requireText(command.traineeUsername(), "traineeUsername");
+            Validation.requireText(command.trainerUsername(), "trainerUsername");
+            Validation.requireText(command.name(), "trainingName");
+            Validation.requireNotNull(command.date(), "trainingDate");
+            Validation.requirePositive(command.duration(), "trainingDuration");
+        });
+
+        Trainee trainee = traineeDao.findByUsername(command.traineeUsername())
+                .orElseThrow(() -> notFound("trainee", command.traineeUsername()));
+        Trainer trainer = trainerDao.findByUsername(command.trainerUsername())
+                .orElseThrow(() -> notFound("trainer", command.trainerUsername()));
+
+        Training saved = trainingDao.save(new Training(null, trainee, trainer, command.name(),
+                trainer.specialization(), command.date(), command.duration()));
+        log.info("Added training id={}, trainer={}, trainee={}",
+                saved.id(), command.trainerUsername(), command.traineeUsername());
+        return saved;
+    }
+
     /** Trainings of the trainee, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
     public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
@@ -87,5 +122,11 @@ public class TrainingService {
         Validation.validated("get trainings of trainer username=" + credentials.username(),
                 () -> Validation.requireNotNull(criteria, "criteria"));
         return trainingDao.findForTrainer(credentials.username(), criteria);
+    }
+
+    private NotFoundException notFound(String role, String username) {
+        log.warn("Cannot add training: {} username={} not found", role, username);
+        return new NotFoundException(role.substring(0, 1).toUpperCase() + role.substring(1)
+                + " not found: " + username);
     }
 }
