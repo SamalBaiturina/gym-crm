@@ -9,6 +9,10 @@ import com.epam.gymcrm.infrastructure.web.dto.TraineeRegistrationRequest;
 import com.epam.gymcrm.infrastructure.web.dto.UpdateTraineeRequest;
 import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
+import com.epam.gymcrm.infrastructure.web.dto.TrainerSummaryResponse;
+import com.epam.gymcrm.infrastructure.web.dto.TrainerUsernameRequest;
+import com.epam.gymcrm.infrastructure.web.dto.UpdateTraineeTrainersRequest;
+import java.util.List;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,5 +72,27 @@ public class TraineeController {
     @DeleteMapping("/{username}")
     public void delete(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
         traineeService.delete(user.credentials());
+    }
+
+        /** Active trainers that are not assigned to the trainee yet. */
+    @GetMapping("/{username}/not-assigned-trainers")
+    public List<TrainerSummaryResponse> notAssignedTrainers(
+            @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
+        return traineeService.getNotAssignedTrainers(user.credentials()).stream()
+                .map(TrainerSummaryResponse::from)
+                .toList();
+    }
+
+    /** Replaces the trainee's trainers with the given ones. An empty list removes all of them. */
+    @PutMapping("/{username}/trainers")
+    public List<TrainerSummaryResponse> updateTrainers(
+            @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
+            @Valid @RequestBody UpdateTraineeTrainersRequest request) {
+        List<String> usernames = request.trainers().stream()
+                .map(TrainerUsernameRequest::username)
+                .toList();
+        return traineeService.updateTrainers(user.credentials(), usernames).stream()
+                .map(TrainerSummaryResponse::from)
+                .toList();
     }
 }
