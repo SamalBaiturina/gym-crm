@@ -1,0 +1,106 @@
+package com.epam.gymcrm.application.service;
+
+import com.epam.gymcrm.application.port.out.TraineeDao;
+import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.exception.ValidationException;
+import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.domain.model.User;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class TraineeProfileServiceTest {
+
+    private static final Credentials CREDENTIALS = new Credentials("John.Smith", "secret");
+
+    @Mock
+    private TraineeDao traineeDao;
+    @Mock
+    private TrainerDao trainerDao;
+    @Mock
+    private UsernameGenerator usernameGenerator;
+    @Mock
+    private PasswordGenerator passwordGenerator;
+    @Mock
+    private AuthenticationService authenticationService;
+    @InjectMocks
+    private TraineeService service;
+
+    private Trainee trainee() {
+        User user = new User("John", "Smith", "John.Smith", "secret", true);
+        return new Trainee(1L, user, LocalDate.of(2000, 1, 1), "Astana");
+    }
+
+    private Trainer trainer() {
+        User user = new User("Anna", "Brown", "Anna.Brown", "secret", true);
+        return new Trainer(5L, user, new TrainingType(2L, "YOGA"));
+    }
+
+    @Test
+    void getProfileReturnsTheTraineeWithHisTrainers() {
+        Trainee trainee = trainee();
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee);
+        when(trainerDao.findAssignedTo("John.Smith")).thenReturn(List.of(trainer()));
+
+        TraineeProfile profile = service.getProfile(CREDENTIALS);
+
+        assertSame(trainee, profile.trainee());
+        assertEquals(List.of(trainer()), profile.trainers());
+    }
+
+    @Test
+    void getProfileWithWrongPasswordThrows() {
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenThrow(new AuthenticationException());
+
+        assertThrows(AuthenticationException.class, () -> service.getProfile(CREDENTIALS));
+        verifyNoInteractions(trainerDao);
+    }
+
+    @Test
+    void updateProfileChangesNamesFieldsAndActiveFlag() {
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee());
+        when(traineeDao.save(any(Trainee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(trainerDao.findAssignedTo("John.Smith")).thenReturn(List.of(trainer()));
+        Trainee changes = new Trainee(null, User.of("Johnny", "Smythe"), LocalDate.of(1999, 5, 5), "Almaty");
+
+        TraineeProfile profile = service.updateProfile(CREDENTIALS, changes, false);
+
+        User user = profile.trainee().user();
+        assertEquals("Johnny", user.firstName());
+        assertEquals("Smythe", user.lastName());
+        assertEquals("John.Smith", user.username());
+        assertEquals("secret", user.password());
+        assertFalse(user.isActive());
+        assertEquals(LocalDate.of(1999, 5, 5), profile.trainee().dateOfBirth());
+        assertEquals("Almaty", profile.trainee().address());
+        assertEquals(1, profile.trainers().size());
+    }
+
+    @Test
+    void updateProfileRejectsBlankName() {
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee());
+        Trainee changes = new Trainee(null, User.of(" ", "Smythe"), null, null);
+
+        assertThrows(ValidationException.class, () -> service.updateProfile(CREDENTIALS, changes, true));
+        verify(traineeDao, never()).save(any());
+    }
+}

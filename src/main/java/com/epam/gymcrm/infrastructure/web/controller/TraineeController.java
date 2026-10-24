@@ -4,13 +4,22 @@ import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.dto.CredentialsResponse;
+import com.epam.gymcrm.infrastructure.web.dto.TraineeProfileResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TraineeRegistrationRequest;
+import com.epam.gymcrm.infrastructure.web.dto.UpdateTraineeRequest;
+import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor.AUTHENTICATED_USER;
 
 @RestController
 @RequestMapping("/trainees")
@@ -32,5 +41,28 @@ public class TraineeController {
                 request.address());
         User created = traineeService.create(trainee).user();
         return new CredentialsResponse(created.username(), created.password());
+    }
+
+    /** The profile of the caller. The interceptor has already checked that the path username is his own. */
+    @GetMapping("/{username}")
+    public TraineeProfileResponse get(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
+        return TraineeProfileResponse.from(traineeService.getProfile(user.credentials()));
+    }
+
+    @PutMapping("/{username}")
+    public TraineeProfileResponse update(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
+                                         @Valid @RequestBody UpdateTraineeRequest request) {
+        Trainee changes = new Trainee(null,
+                User.of(request.firstName(), request.lastName()),
+                request.dateOfBirth(),
+                request.address());
+        return TraineeProfileResponse.from(
+                traineeService.updateProfile(user.credentials(), changes, request.isActive()));
+    }
+
+    /** Hard delete: the trainee's trainings are deleted with him. */
+    @DeleteMapping("/{username}")
+    public void delete(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
+        traineeService.delete(user.credentials());
     }
 }

@@ -65,6 +65,19 @@ public class TraineeService extends AbstractProfileService<Trainee> {
     }
 
     @Transactional(readOnly = true)
+    public TraineeProfile getProfile(Credentials credentials) {
+        Trainee trainee = authenticate(credentials);
+        return new TraineeProfile(trainee, trainerDao.findAssignedTo(credentials.username()));
+    }
+
+    /** Updates the profile, including the active flag, and returns it with the current trainers. */
+    @Transactional
+    public TraineeProfile updateProfile(Credentials credentials, Trainee changes, boolean active) {
+        Trainee saved = updateWithActive(credentials, changes, active);
+        return new TraineeProfile(saved, trainerDao.findAssignedTo(credentials.username()));
+    }
+
+    @Transactional(readOnly = true)
     public List<Trainer> getNotAssignedTrainers(Credentials credentials) {
         authenticate(credentials);
         return trainerDao.findNotAssignedTo(credentials.username());

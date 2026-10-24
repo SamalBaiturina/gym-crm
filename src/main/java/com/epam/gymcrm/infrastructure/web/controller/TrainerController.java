@@ -6,13 +6,21 @@ import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.dto.CredentialsResponse;
+import com.epam.gymcrm.infrastructure.web.dto.TrainerProfileResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TrainerRegistrationRequest;
+import com.epam.gymcrm.infrastructure.web.dto.UpdateTrainerRequest;
+import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor.AUTHENTICATED_USER;
 
 @RestController
 @RequestMapping("/trainers")
@@ -34,5 +42,17 @@ public class TrainerController {
         Trainer trainer = new Trainer(null, User.of(request.firstName(), request.lastName()), specialization);
         User created = trainerService.create(trainer).user();
         return new CredentialsResponse(created.username(), created.password());
+    }
+
+    @GetMapping("/{username}")
+    public TrainerProfileResponse get(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
+        return TrainerProfileResponse.from(trainerService.getProfile(user.credentials()));
+    }
+
+    @PutMapping("/{username}")
+    public TrainerProfileResponse update(@RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
+                                         @Valid @RequestBody UpdateTrainerRequest request) {
+        return TrainerProfileResponse.from(trainerService.updateProfile(
+                user.credentials(), request.firstName(), request.lastName(), request.isActive()));
     }
 }

@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Account behaviour shared by trainees and trainers: creation with generated credentials, lookup,
  * password change, update of the names and activation. Subclasses add only what differs.
  */
-public abstract class AbstractProfileService<T extends UserProfile<T>> {
+public abstract class   AbstractProfileService<T extends UserProfile<T>> {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -84,12 +84,24 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
         log.info("Password changed for {} username={}", role, change.current().username());
     }
 
-    /** Updates the names and the role-specific fields; username and password stay the same. */
+    /** Updates the names and the role-specific fields; username, password and the active flag stay the same. */
     @Transactional
     public T update(Credentials credentials, T changes) {
+        return doUpdate(credentials, changes, null);
+    }
+
+    /** Same as update, and also sets the active flag to the given value. */
+    protected T updateWithActive(Credentials credentials, T changes, boolean active) {
+        return doUpdate(credentials, changes, active);
+    }
+
+    private T doUpdate(Credentials credentials, T changes, Boolean active) {
         T existing = authenticate(credentials);
         validate(changes, "update " + role + " username=" + credentials.username());
         User user = existing.user().withNames(changes.user().firstName(), changes.user().lastName());
+        if (active != null) {
+            user = user.withActive(active);
+        }
         T saved = dao().save(applyChanges(existing.withUser(user), changes));
         log.info("Updated {} username={}", role, credentials.username());
         return saved;
