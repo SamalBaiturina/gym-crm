@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Trainer operations. The specialization is set at registration and does not change. */
 @Service
 public class TrainerService extends AbstractProfileService<Trainer> {
 

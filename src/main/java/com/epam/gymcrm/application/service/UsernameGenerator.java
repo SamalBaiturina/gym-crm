@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Builds the username as FirstName.LastName and adds a serial number if it is taken (John.Smith,
+ * John.Smith1, ...). Usernames are unique across trainees and trainers.
+ */
 @Component
 public class UsernameGenerator {
 
@@ -28,6 +32,7 @@ public class UsernameGenerator {
         this.trainerDao = trainerDao;
     }
 
+    /** Returns the first free username for the given names. */
     public String generate(String firstName, String lastName) {
         String base = firstName + "." + lastName;
 

@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Checks a username and password against trainees and trainers. An unknown username and a wrong
+ * password give the same result, so the response does not reveal which usernames exist.
+ */
 @Service
 public class AuthenticationService {
 
@@ -34,11 +38,13 @@ public class AuthenticationService {
         this.trainerDao = trainerDao;
     }
 
+    /** True if the username and password belong to a trainee. */
     @Transactional(readOnly = true)
     public boolean matchesTrainee(Credentials credentials) {
         return find(traineeDao, credentials).isPresent();
     }
 
+    /** True if the username and password belong to a trainer. */
     @Transactional(readOnly = true)
     public boolean matchesTrainer(Credentials credentials) {
         return find(trainerDao, credentials).isPresent();

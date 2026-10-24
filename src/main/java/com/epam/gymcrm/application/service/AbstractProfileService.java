@@ -77,6 +77,7 @@ public abstract class   AbstractProfileService<T extends UserProfile<T>> {
         return authenticate(credentials);
     }
 
+    /** Replaces the password after checking the current one. */
     @Transactional
     public void changePassword(PasswordChange change) {
         T profile = authenticate(change.current());

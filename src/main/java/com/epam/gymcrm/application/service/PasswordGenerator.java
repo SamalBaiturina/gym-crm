@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 
+/** Generates a random 10-character password with SecureRandom. */
 @Component
 public class PasswordGenerator {
 
@@ -13,6 +14,7 @@ public class PasswordGenerator {
 
     private final SecureRandom random = new SecureRandom();
 
+    /** Returns a new random password made of letters and digits. */
     public String generate() {
         StringBuilder sb = new StringBuilder(LENGTH);
         for (int i = 0; i < LENGTH; i++) {

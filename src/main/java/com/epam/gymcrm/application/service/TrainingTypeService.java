@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** Read access to the constant list of training types. */
 @Service
 public class TrainingTypeService {
 

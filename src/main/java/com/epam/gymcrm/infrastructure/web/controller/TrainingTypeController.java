@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** Read-only list of training types. */
 @RestController
 @RequestMapping("/training-types")
 public class TrainingTypeController {

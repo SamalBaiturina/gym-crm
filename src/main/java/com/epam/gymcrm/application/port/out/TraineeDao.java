@@ -5,6 +5,7 @@ import com.epam.gymcrm.domain.model.Trainer;
 
 import java.util.List;
 
+/** Storage of trainees. */
 public interface TraineeDao extends ProfileDao<Trainee> {
 
     /** Removes the trainee together with the user and the trainings (cascade). */

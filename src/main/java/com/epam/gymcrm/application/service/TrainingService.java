@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** Adding trainings and listing them for a trainee or a trainer. */
 @Service
 public class TrainingService {
 

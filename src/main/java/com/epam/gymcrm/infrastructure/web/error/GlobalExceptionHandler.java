@@ -30,18 +30,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** 400: invalid data in the request or in a service call. */
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiError> handleValidation(ValidationException e) {
         return ResponseEntity.badRequest()
                 .body(new ApiError("VALIDATION_ERROR", List.of(e.getMessage())));
     }
 
+    /** 404: the requested object does not exist. */
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiError("NOT_FOUND", List.of(e.getMessage())));
     }
 
+    /** 401: wrong or missing credentials; the header tells the client to use Basic auth. */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthentication(AuthenticationException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -49,7 +52,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiError("UNAUTHORIZED", List.of(e.getMessage())));
     }
 
-        @ExceptionHandler(AccessDeniedException.class)
+    /** 403: the caller tries to reach another user's data. */
+    @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ApiError("FORBIDDEN", List.of(e.getMessage())));

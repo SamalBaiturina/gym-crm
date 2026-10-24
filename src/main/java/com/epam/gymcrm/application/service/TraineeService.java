@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Trainee operations: profile with trainers, delete, and the list of the trainee's trainers. */
 @Service
 public class TraineeService extends AbstractProfileService<Trainee> {
 

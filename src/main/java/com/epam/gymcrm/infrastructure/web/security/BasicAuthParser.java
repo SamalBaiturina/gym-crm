@@ -15,6 +15,10 @@ public final class BasicAuthParser {
     private BasicAuthParser() {
     }
 
+    /**
+     * Reads username and password from the header value. Throws AuthenticationException (401) if the
+     * header is missing or malformed.
+     */
     public static Credentials parse(String header) {
         if (header == null || !header.regionMatches(true, 0, PREFIX, 0, PREFIX.length())) {
             throw new AuthenticationException("Authorization header with Basic credentials is required");

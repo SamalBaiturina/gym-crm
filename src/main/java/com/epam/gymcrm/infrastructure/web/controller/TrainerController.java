@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor.AUTHENTICATED_USER;
 
+/**
+ * Trainer registration and profile. All methods except registration need a valid Authorization header
+ * and work only with the caller's own username.
+ */
 @RestController
 @RequestMapping("/trainers")
 public class TrainerController {
