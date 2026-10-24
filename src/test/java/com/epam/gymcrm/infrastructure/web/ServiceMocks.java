@@ -3,6 +3,7 @@ package com.epam.gymcrm.infrastructure.web;
 import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
+import com.epam.gymcrm.application.service.TrainingTypeService;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 
 import static org.mockito.Mockito.mock;
@@ -18,7 +19,8 @@ final class ServiceMocks {
 
     /** Every service the web layer needs. Add a service here when a new controller starts using it. */
     static BeanFactoryPostProcessor forWebLayer() {
-        return of(AuthenticationService.class, TraineeService.class, TrainerService.class);
+        return of(AuthenticationService.class, TraineeService.class, TrainerService.class,
+                TrainingTypeService.class);
     }
 
     static BeanFactoryPostProcessor of(Class<?>... types) {
