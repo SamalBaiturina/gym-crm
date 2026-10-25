@@ -5,6 +5,7 @@ import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
+import com.epam.gymcrm.infrastructure.web.security.AllowInactive;
 import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
@@ -26,6 +27,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +42,10 @@ class BasicAuthInterceptorTest {
 
         @PublicEndpoint
         public void open() {
+        }
+
+        @AllowInactive
+        public void reactivation() {
         }
     }
 
@@ -116,5 +123,24 @@ class BasicAuthInterceptorTest {
         HandlerMethod handler = handler("secured");
 
         assertThrows(AuthenticationException.class, () -> interceptor.preHandle(request, response, handler));
+    }
+
+    @Test
+    void deactivatedUserIsForbidden() throws Exception {
+        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.isDeactivated(JOHN)).thenReturn(true);
+        MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
+        HandlerMethod handler = handler("secured");
+
+        assertThrows(AccessDeniedException.class, () -> interceptor.preHandle(request, response, handler));
+    }
+
+    @Test
+    void deactivatedUserCanCallReactivation() throws Exception {
+        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
+
+        assertTrue(interceptor.preHandle(request, response, handler("reactivation")));
+        verify(authenticationService, never()).isDeactivated(JOHN);
     }
 }

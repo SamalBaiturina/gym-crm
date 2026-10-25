@@ -72,6 +72,7 @@ Authorization: Basic base64(username:password)
 With curl: `curl -u username:password ...`.
 
 - Missing or wrong credentials: `401` with `WWW-Authenticate: Basic realm="gym-crm"`.
+- A deactivated user gets `403` on every endpoint except `PATCH .../active`, so he can switch himself back on.
 - The user can work only with his own data: for `/trainees/{username}` and `/trainers/{username}` the username in the path must be the one from the header, otherwise `403`.
   A training can be added only by its trainee or its trainer.
 
@@ -147,7 +148,7 @@ Every error has the same JSON body and never contains a stack trace:
 | 400 | `VALIDATION_ERROR` | invalid body, parameter or business rule (for example an unknown training type id) |
 | 400 | `MALFORMED_REQUEST` | the body is missing or is not valid JSON |
 | 401 | `UNAUTHORIZED` | missing or wrong credentials |
-| 403 | `FORBIDDEN` | the path username is not the caller's, or the caller may not add this training |
+| 403 | `FORBIDDEN` | the path username is not the caller's, the account is deactivated, or the caller may not add this training |
 | 404 | `NOT_FOUND` | the trainee, trainer or training type does not exist |
 | 500 | `INTERNAL_ERROR` | unexpected error (the details are only in the server log) |
 

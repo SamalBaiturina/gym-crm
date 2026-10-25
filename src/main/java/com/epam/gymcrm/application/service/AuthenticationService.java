@@ -62,7 +62,7 @@ public class AuthenticationService {
         return authenticate(trainerDao, "Trainer", credentials);
     }
 
-        /** Finds out who is calling: returns the role if the credentials are valid, otherwise throws. */
+    /** Finds out who is calling: returns the role if the credentials are valid, otherwise throws. */
     @Transactional(readOnly = true)
     public Role authenticate(Credentials credentials) {
         if (matchesTrainee(credentials)) {
@@ -73,6 +73,14 @@ public class AuthenticationService {
         }
         log.warn("Authentication failed for username={}", credentials.username());
         throw new AuthenticationException();
+    }
+
+    /** True if the credentials are valid and belong to a deactivated trainee or trainer. */
+    @Transactional(readOnly = true)
+    public boolean isDeactivated(Credentials credentials) {
+        return find(traineeDao, credentials).map(profile -> !profile.user().isActive())
+                .or(() -> find(trainerDao, credentials).map(profile -> !profile.user().isActive()))
+                .orElse(false);
     }
 
     private <T extends UserProfile<T>> Optional<T> find(ProfileDao<T> dao, Credentials credentials) {

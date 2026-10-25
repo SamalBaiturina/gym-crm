@@ -15,6 +15,7 @@ import java.util.Map;
 
 /**
  * Checks the Authorization header before every controller method except those marked @PublicEndpoint.
+ * A deactivated user is rejected with 403 unless the method is marked @AllowInactive.
  * Exceptions thrown here are handled by GlobalExceptionHandler like any other.
  */
 @Component
@@ -36,9 +37,17 @@ public class BasicAuthInterceptor implements HandlerInterceptor {
         }
         Credentials credentials = BasicAuthParser.parse(request.getHeader(HttpHeaders.AUTHORIZATION));
         Role role = authenticationService.authenticate(credentials);
+        requireActive(method, credentials);
         requireOwnUsername(request, credentials);
         request.setAttribute(AUTHENTICATED_USER, new AuthenticatedUser(credentials, role));
         return true;
+    }
+
+    /** A deactivated user may only reactivate himself. Checked after authentication, so 401 comes first. */
+    private void requireActive(HandlerMethod method, Credentials credentials) {
+        if (!method.hasMethodAnnotation(AllowInactive.class) && authenticationService.isDeactivated(credentials)) {
+            throw new AccessDeniedException("The account is deactivated, activate it first");
+        }
     }
 
     /** A user may work only with his own {username} resource. Checked after authentication, so 401 comes first. */

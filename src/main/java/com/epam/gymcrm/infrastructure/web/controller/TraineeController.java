@@ -14,6 +14,7 @@ import com.epam.gymcrm.infrastructure.web.dto.TrainerSummaryResponse;
 import com.epam.gymcrm.infrastructure.web.dto.TrainerUsernameRequest;
 import com.epam.gymcrm.infrastructure.web.dto.UpdateTraineeRequest;
 import com.epam.gymcrm.infrastructure.web.dto.UpdateTraineeTrainersRequest;
+import com.epam.gymcrm.infrastructure.web.security.AllowInactive;
 import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
 import io.swagger.v3.oas.annotations.Operation;
@@ -84,7 +85,7 @@ public class TraineeController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Profile with the assigned trainers"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @GetMapping("/{username}")
     public TraineeProfileResponse get(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
@@ -98,7 +99,7 @@ public class TraineeController {
                     @ApiResponse(responseCode = "200", description = "Updated profile"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @PutMapping("/{username}")
     public TraineeProfileResponse update(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
@@ -118,7 +119,7 @@ public class TraineeController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Trainee deleted"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @DeleteMapping("/{username}")
     public void delete(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
@@ -135,8 +136,9 @@ public class TraineeController {
                     @ApiResponse(responseCode = "200", description = "Flag switched"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @PatchMapping("/{username}/active")
+    @AllowInactive
     public void toggleActive(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody ActivationRequest request) {
@@ -149,7 +151,7 @@ public class TraineeController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Trainers that can be assigned"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @GetMapping("/{username}/not-assigned-trainers")
     public List<TrainerSummaryResponse> notAssignedTrainers(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
@@ -166,7 +168,7 @@ public class TraineeController {
                     @ApiResponse(responseCode = "200", description = "The new list of trainers"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's"),
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated"),
                     @ApiResponse(responseCode = "404", description = "A trainer from the list does not exist")})
     @PutMapping("/{username}/trainers")
     public List<TrainerSummaryResponse> updateTrainers(
@@ -190,7 +192,7 @@ public class TraineeController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Trainings that match the filters"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
+                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
     @GetMapping("/{username}/trainings")
     public List<TraineeTrainingResponse> trainings(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
