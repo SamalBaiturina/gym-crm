@@ -94,8 +94,8 @@ With curl: `curl -u username:password ...`.
 | 12 | `GET /trainees/{username}/trainings` | Trainee's trainings, filters: `periodFrom`, `periodTo` (`yyyy-MM-dd`), `trainerName`, `trainingType` | yes |
 | 13 | `GET /trainers/{username}/trainings` | Trainer's trainings, filters: `periodFrom`, `periodTo`, `traineeName` | yes |
 | 14 | `POST /trainings` | Add a training | yes |
-| 15 | `PATCH /trainees/{username}/active` | Activate or deactivate the trainee, body `{"isActive": true}` | yes |
-| 16 | `PATCH /trainers/{username}/active` | Activate or deactivate the trainer, body `{"isActive": false}` | yes |
+| 15 | `PATCH /trainees/{username}/active` | Switch the trainee's active flag on every call, body `{"isActive": true}` (required) | yes |
+| 16 | `PATCH /trainers/{username}/active` | Switch the trainer's active flag on every call, body `{"isActive": true}` (required) | yes |
 | 17 | `GET /training-types` | All training types | yes |
 
 Notes:
