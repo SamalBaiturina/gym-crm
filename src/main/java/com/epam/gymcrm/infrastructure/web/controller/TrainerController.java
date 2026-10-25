@@ -84,7 +84,7 @@ public class TrainerController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Profile with the assigned trainees"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
+                    @ApiResponse(responseCode = "403", description = "Another user's profile or a deactivated account")})
     @GetMapping("/{username}")
     public TrainerProfileResponse get(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
@@ -98,7 +98,7 @@ public class TrainerController {
                     @ApiResponse(responseCode = "200", description = "Updated profile"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
+                    @ApiResponse(responseCode = "403", description = "Another user's profile or a deactivated account")})
     @PutMapping("/{username}")
     public TrainerProfileResponse update(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
@@ -117,7 +117,7 @@ public class TrainerController {
                     @ApiResponse(responseCode = "200", description = "Flag switched"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
+                    @ApiResponse(responseCode = "403", description = "Another user's profile or a deactivated account")})
     @PatchMapping("/{username}/active")
     @AllowInactive
     public void toggleActive(
@@ -133,7 +133,7 @@ public class TrainerController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Trainings that match the filters"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "Another user's path, or the account is deactivated")})
+                    @ApiResponse(responseCode = "403", description = "Another user's profile or a deactivated account")})
     @GetMapping("/{username}/trainings")
     public List<TrainerTrainingResponse> trainings(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,

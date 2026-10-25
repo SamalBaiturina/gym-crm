@@ -39,7 +39,8 @@ public class TrainingController {
                     @ApiResponse(responseCode = "200", description = "Training added"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
-                    @ApiResponse(responseCode = "403", description = "The caller is neither the trainee nor the trainer"),
+                    @ApiResponse(responseCode = "403",
+                            description = "Deactivated account, or the caller is not the trainee or the trainer"),
                     @ApiResponse(responseCode = "404", description = "Trainee or trainer does not exist")})
     @PostMapping
     public void add(@Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,

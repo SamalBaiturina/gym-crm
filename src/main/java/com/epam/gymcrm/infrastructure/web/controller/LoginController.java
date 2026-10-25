@@ -38,7 +38,8 @@ public class LoginController {
     @Operation(summary = "Check the credentials",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Credentials are valid"),
-                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials")})
+                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
+                    @ApiResponse(responseCode = "403", description = "The account is deactivated")})
     @GetMapping
     public void login() {
     }
@@ -49,7 +50,8 @@ public class LoginController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Password changed"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
-                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials")})
+                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
+                    @ApiResponse(responseCode = "403", description = "The account is deactivated")})
     @PutMapping
     public void changePassword(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,

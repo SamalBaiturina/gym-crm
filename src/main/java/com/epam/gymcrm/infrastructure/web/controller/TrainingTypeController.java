@@ -28,7 +28,8 @@ public class TrainingTypeController {
             description = "The ids are used as the specialization when a trainer is registered.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "All training types"),
-                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials")})
+                    @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
+                    @ApiResponse(responseCode = "403", description = "The account is deactivated")})
     @GetMapping
     public List<TrainingTypeResponse> list() {
         return trainingTypeService.getAll().stream()
