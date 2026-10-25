@@ -118,14 +118,6 @@ public abstract class   AbstractProfileService<T extends UserProfile<T>> {
         return active;
     }
 
-    /** Sets the active flag to the given value. Repeating the same call changes nothing. */
-    @Transactional
-    public void setActive(Credentials credentials, boolean active) {
-        T profile = authenticate(credentials);
-        dao().save(profile.withUser(profile.user().withActive(active)));
-        log.info("Set active={} for {} username={}", active, role, credentials.username());
-    }
-
     private void validate(T profile, String context) {
         Validation.validated(context, () -> {
             Validation.requireNotNull(profile, role);

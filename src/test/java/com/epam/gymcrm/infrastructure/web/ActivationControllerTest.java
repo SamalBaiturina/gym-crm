@@ -74,36 +74,36 @@ class ActivationControllerTest {
     }
 
     @Test
-    void traineeIsDeactivatedWithTheValueFromTheRequest() throws Exception {
+    void traineeIsToggled() throws Exception {
         mockMvc.perform(patch("/trainees/John.Smith/active")
                         .header(HttpHeaders.AUTHORIZATION, basic(JOHN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"isActive\":false}"))
                 .andExpect(status().isOk());
 
-        verify(traineeService).setActive(JOHN, false);
+        verify(traineeService).toggleActive(JOHN);
     }
 
     @Test
-    void traineeIsActivatedWithTheValueFromTheRequest() throws Exception {
+    void traineeIsToggledAgain() throws Exception {
         mockMvc.perform(patch("/trainees/John.Smith/active")
                         .header(HttpHeaders.AUTHORIZATION, basic(JOHN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"isActive\":true}"))
                 .andExpect(status().isOk());
 
-        verify(traineeService).setActive(JOHN, true);
+        verify(traineeService).toggleActive(JOHN);
     }
 
     @Test
-    void trainerIsDeactivatedWithTheValueFromTheRequest() throws Exception {
+    void trainerIsToggled() throws Exception {
         mockMvc.perform(patch("/trainers/Anna.Brown/active")
                         .header(HttpHeaders.AUTHORIZATION, basic(ANNA))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"isActive\":false}"))
                 .andExpect(status().isOk());
 
-        verify(trainerService).setActive(ANNA, false);
+        verify(trainerService).toggleActive(ANNA);
     }
 
     @ParameterizedTest

@@ -106,20 +106,22 @@ public class TrainerController {
                 user.credentials(), request.firstName(), request.lastName(), request.isActive()));
     }
 
-    /** Sets the trainer's active flag to the value from the request; repeating the call is harmless. */
+    /** Flips the trainer's active flag on every call (not idempotent). */
     @Operation(summary = "Activate or deactivate the trainer",
-            description = "Sets the flag to the value from the body, so repeating the call changes nothing.",
+            description = "Switches the flag to the opposite value on every call, so repeating the call "
+                    + "changes it back. The isActive field is required by the contract, but the new value "
+                    + "is always the opposite of the current one.",
             parameters = @Parameter(name = "username", in = ParameterIn.PATH, description = OWN_USERNAME),
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Flag set"),
+                    @ApiResponse(responseCode = "200", description = "Flag switched"),
                     @ApiResponse(responseCode = "400", description = "Invalid request body"),
                     @ApiResponse(responseCode = "401", description = "Missing or wrong credentials"),
                     @ApiResponse(responseCode = "403", description = "Username in the path is not the caller's")})
     @PatchMapping("/{username}/active")
-    public void setActive(
+    public void toggleActive(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody ActivationRequest request) {
-        trainerService.setActive(user.credentials(), request.isActive());
+        trainerService.toggleActive(user.credentials());
     }
 
     /** Trainings of the trainer. All parameters are optional: dates as yyyy-MM-dd and the trainee's first name. */

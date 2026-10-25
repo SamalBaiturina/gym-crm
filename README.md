@@ -100,7 +100,7 @@ With curl: `curl -u username:password ...`.
 Notes:
 
 - The username and the password are generated on registration (`First.Last`, with a serial number if taken; 10 random characters). The password is returned only once.
-- `PATCH .../active` sets the flag to the value from the body, so repeating the call changes nothing (it is idempotent). It does not toggle.
+- `PATCH .../active` switches the flag to the opposite value on every call (it is not idempotent, as the task requires). The `isActive` field is required in the body, but the result does not depend on it.
 - A training type is sent as an id when a trainer is registered and returned as `{"id": 2, "name": "YOGA"}`.
   The type of a new training is the specialization of its trainer.
 - The name filters match the first name only. All filters are optional.
@@ -186,7 +186,6 @@ mvn clean test
 ## Console demo operations
 
 `GymFacade` keeps the 18 service operations in one place; `Main` runs them as a demo. The REST API covers the same functions.
-In the facade, activate/de-activate flips the flag on every call; the REST endpoints set the flag instead.
 
 1. Create trainer profile
 2. Create trainee profile
