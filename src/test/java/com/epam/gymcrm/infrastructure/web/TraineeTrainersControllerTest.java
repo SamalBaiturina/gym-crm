@@ -8,6 +8,7 @@ import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,7 +70,7 @@ class TraineeTrainersControllerTest {
     void setUp() {
         reset(authenticationService, traineeService);
         mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
     }
 
     private static Trainer trainer(long id, String first, String last, String type) {

@@ -5,6 +5,7 @@ import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,8 +65,8 @@ class ActivationControllerTest {
     void setUp() {
         reset(authenticationService, traineeService, trainerService);
         mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
-        when(authenticationService.authenticate(ANNA)).thenReturn(Role.TRAINER);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
+        when(authenticationService.authenticateAndLoad(ANNA)).thenReturn(new AuthenticatedUser(ANNA, Role.TRAINER, true));
     }
 
     private static String basic(Credentials credentials) {

@@ -8,6 +8,7 @@ import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.UserProfile;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,24 +64,22 @@ public class AuthenticationService {
     }
 
     /** Finds out who is calling: returns the role if the credentials are valid, otherwise throws. */
+    /**
+     * Finds out who is calling in one pass: looks the user up by username (the trainees first, then the
+     * trainers), checks the password and returns the role and the active flag together with the credentials.
+     *
+     * @throws AuthenticationException if there is no such user or the password is wrong
+     */
     @Transactional(readOnly = true)
-    public Role authenticate(Credentials credentials) {
-        if (matchesTrainee(credentials)) {
-            return Role.TRAINEE;
-        }
-        if (matchesTrainer(credentials)) {
-            return Role.TRAINER;
-        }
-        log.warn("Authentication failed for username={}", credentials.username());
-        throw new AuthenticationException();
-    }
-
-    /** True if the credentials are valid and belong to a deactivated trainee or trainer. */
-    @Transactional(readOnly = true)
-    public boolean isDeactivated(Credentials credentials) {
-        return find(traineeDao, credentials).map(profile -> !profile.user().isActive())
-                .or(() -> find(trainerDao, credentials).map(profile -> !profile.user().isActive()))
-                .orElse(false);
+    public AuthenticatedUser authenticateAndLoad(Credentials credentials) {
+        return find(traineeDao, credentials)
+                .map(trainee -> new AuthenticatedUser(credentials, Role.TRAINEE, trainee.user().isActive()))
+                .or(() -> find(trainerDao, credentials)
+                        .map(trainer -> new AuthenticatedUser(credentials, Role.TRAINER, trainer.user().isActive())))
+                .orElseThrow(() -> {
+                    log.warn("Authentication failed for username={}", credentials.username());
+                    return new AuthenticationException();
+                });
     }
 
     private <T extends UserProfile<T>> Optional<T> find(ProfileDao<T> dao, Credentials credentials) {

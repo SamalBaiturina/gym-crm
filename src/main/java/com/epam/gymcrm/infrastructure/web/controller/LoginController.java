@@ -4,7 +4,7 @@ import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.infrastructure.web.dto.ChangePasswordRequest;
-import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

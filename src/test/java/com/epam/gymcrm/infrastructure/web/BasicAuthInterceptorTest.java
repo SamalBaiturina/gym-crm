@@ -3,10 +3,10 @@ package com.epam.gymcrm.infrastructure.web;
 import com.epam.gymcrm.application.service.AuthenticationException;
 import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.infrastructure.web.security.AllowInactive;
-import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor;
 import com.epam.gymcrm.infrastructure.web.security.PublicEndpoint;
 import org.junit.jupiter.api.Test;
@@ -86,7 +86,7 @@ class BasicAuthInterceptorTest {
 
     @Test
     void validCredentialsAreStoredInTheRequest() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINER);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINER, true));
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
 
         assertTrue(interceptor.preHandle(request, response, handler("secured")));
@@ -98,7 +98,7 @@ class BasicAuthInterceptorTest {
 
     @Test
     void ownUsernameInThePathIsAllowed() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("username", "John.Smith"));
 
@@ -107,7 +107,7 @@ class BasicAuthInterceptorTest {
 
     @Test
     void anotherUsernameInThePathIsForbidden() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("username", "Anna.Brown"));
         HandlerMethod handler = handler("secured");
@@ -117,7 +117,7 @@ class BasicAuthInterceptorTest {
 
     @Test
     void wrongCredentialsGive401EvenForAnotherUsersPath() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenThrow(new AuthenticationException());
+        when(authenticationService.authenticateAndLoad(JOHN)).thenThrow(new AuthenticationException());
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("username", "Anna.Brown"));
         HandlerMethod handler = handler("secured");
@@ -127,8 +127,7 @@ class BasicAuthInterceptorTest {
 
     @Test
     void deactivatedUserIsForbidden() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
-        when(authenticationService.isDeactivated(JOHN)).thenReturn(true);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, false));
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
         HandlerMethod handler = handler("secured");
 
@@ -137,10 +136,9 @@ class BasicAuthInterceptorTest {
 
     @Test
     void deactivatedUserCanCallReactivation() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, false));
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
 
         assertTrue(interceptor.preHandle(request, response, handler("reactivation")));
-        verify(authenticationService, never()).isDeactivated(JOHN);
     }
 }

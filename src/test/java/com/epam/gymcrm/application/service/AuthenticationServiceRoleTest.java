@@ -2,6 +2,7 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
@@ -46,7 +47,10 @@ class AuthenticationServiceRoleTest {
     void traineeCredentialsGiveTraineeRole() {
         when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
 
-        assertEquals(Role.TRAINEE, service.authenticate(new Credentials("John.Smith", "secret")));
+        AuthenticatedUser user = service.authenticateAndLoad(new Credentials("John.Smith", "secret"));
+
+        assertEquals(Role.TRAINEE, user.role());
+        assertEquals("John.Smith", user.credentials().username());
         verifyNoInteractions(trainerDao);
     }
 
@@ -55,7 +59,9 @@ class AuthenticationServiceRoleTest {
         when(traineeDao.findByUsername("Anna.Brown")).thenReturn(Optional.empty());
         when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
 
-        assertEquals(Role.TRAINER, service.authenticate(new Credentials("Anna.Brown", "secret")));
+        AuthenticatedUser user = service.authenticateAndLoad(new Credentials("Anna.Brown", "secret"));
+
+        assertEquals(Role.TRAINER, user.role());
     }
 
     @Test
@@ -64,7 +70,7 @@ class AuthenticationServiceRoleTest {
         when(trainerDao.findByUsername("John.Smith")).thenReturn(Optional.empty());
 
         assertThrows(AuthenticationException.class,
-                () -> service.authenticate(new Credentials("John.Smith", "wrong")));
+                () -> service.authenticateAndLoad(new Credentials("John.Smith", "wrong")));
     }
 
     @Test
@@ -73,6 +79,6 @@ class AuthenticationServiceRoleTest {
         when(trainerDao.findByUsername("nobody")).thenReturn(Optional.empty());
 
         assertThrows(AuthenticationException.class,
-                () -> service.authenticate(new Credentials("nobody", "secret")));
+                () -> service.authenticateAndLoad(new Credentials("nobody", "secret")));
     }
 }

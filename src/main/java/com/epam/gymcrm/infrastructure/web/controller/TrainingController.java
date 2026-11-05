@@ -3,7 +3,7 @@ package com.epam.gymcrm.infrastructure.web.controller;
 import com.epam.gymcrm.application.service.AddTrainingCommand;
 import com.epam.gymcrm.application.service.TrainingService;
 import com.epam.gymcrm.infrastructure.web.dto.AddTrainingRequest;
-import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

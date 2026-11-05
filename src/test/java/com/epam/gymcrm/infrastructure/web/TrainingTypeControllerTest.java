@@ -5,6 +5,7 @@ import com.epam.gymcrm.application.service.TrainingTypeService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,7 +66,7 @@ class TrainingTypeControllerTest {
 
     @Test
     void listReturnsTypesWithIdAndName() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
         when(trainingTypeService.getAll())
                 .thenReturn(List.of(new TrainingType(1L, "FITNESS"), new TrainingType(2L, "YOGA")));
 

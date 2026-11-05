@@ -7,6 +7,7 @@ import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Role;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -92,7 +93,7 @@ class LoginControllerTest {
 
     @Test
     void loginReturns200ForValidCredentials() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
 
         mockMvc.perform(get("/login").header(HttpHeaders.AUTHORIZATION, JOHN_HEADER))
                 .andExpect(status().isOk());
@@ -101,7 +102,7 @@ class LoginControllerTest {
     @Test
     void passwordMayContainAColon() throws Exception {
         Credentials withColon = new Credentials("John.Smith", "pa:ss");
-        when(authenticationService.authenticate(withColon)).thenReturn(Role.TRAINER);
+        when(authenticationService.authenticateAndLoad(withColon)).thenReturn(new AuthenticatedUser(withColon, Role.TRAINER, true));
 
         mockMvc.perform(get("/login").header(HttpHeaders.AUTHORIZATION, basic("John.Smith", "pa:ss")))
                 .andExpect(status().isOk());
@@ -129,7 +130,7 @@ class LoginControllerTest {
 
     @Test
     void loginWithWrongCredentialsIs401() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenThrow(new AuthenticationException());
+        when(authenticationService.authenticateAndLoad(JOHN)).thenThrow(new AuthenticationException());
 
         mockMvc.perform(get("/login").header(HttpHeaders.AUTHORIZATION, JOHN_HEADER))
                 .andExpect(status().isUnauthorized())
@@ -138,7 +139,7 @@ class LoginControllerTest {
 
     @Test
     void changePasswordOfTraineeGoesToTraineeService() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
 
         mockMvc.perform(put("/login")
                         .header(HttpHeaders.AUTHORIZATION, JOHN_HEADER)
@@ -152,7 +153,7 @@ class LoginControllerTest {
 
     @Test
     void changePasswordOfTrainerGoesToTrainerService() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINER);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINER, true));
 
         mockMvc.perform(put("/login")
                         .header(HttpHeaders.AUTHORIZATION, JOHN_HEADER)
@@ -166,7 +167,7 @@ class LoginControllerTest {
 
     @Test
     void changePasswordRejectsBlankNewPassword() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenReturn(Role.TRAINEE);
+        when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
 
         mockMvc.perform(put("/login")
                         .header(HttpHeaders.AUTHORIZATION, JOHN_HEADER)
@@ -180,7 +181,7 @@ class LoginControllerTest {
 
     @Test
     void changePasswordWithWrongOldPasswordIs401() throws Exception {
-        when(authenticationService.authenticate(JOHN)).thenThrow(new AuthenticationException());
+        when(authenticationService.authenticateAndLoad(JOHN)).thenThrow(new AuthenticationException());
 
         mockMvc.perform(put("/login")
                         .header(HttpHeaders.AUTHORIZATION, JOHN_HEADER)

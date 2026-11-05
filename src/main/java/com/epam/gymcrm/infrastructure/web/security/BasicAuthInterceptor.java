@@ -3,7 +3,7 @@ package com.epam.gymcrm.infrastructure.web.security;
 import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.model.Credentials;
-import com.epam.gymcrm.domain.model.Role;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -37,16 +37,16 @@ public class BasicAuthInterceptor implements HandlerInterceptor {
             return true;
         }
         Credentials credentials = BasicAuthParser.parse(request.getHeader(HttpHeaders.AUTHORIZATION));
-        Role role = authenticationService.authenticate(credentials);
-        requireActive(method, credentials);
+        AuthenticatedUser user = authenticationService.authenticateAndLoad(credentials);
+        requireActive(method, user);
         requireOwnUsername(request, credentials);
-        request.setAttribute(AUTHENTICATED_USER, new AuthenticatedUser(credentials, role));
+        request.setAttribute(AUTHENTICATED_USER, user);
         return true;
     }
 
     /** A deactivated user may only reactivate himself. Checked after authentication, so 401 comes first. */
-    private void requireActive(HandlerMethod method, Credentials credentials) {
-        if (!method.hasMethodAnnotation(AllowInactive.class) && authenticationService.isDeactivated(credentials)) {
+    private void requireActive(HandlerMethod method, AuthenticatedUser user) {
+        if (!method.hasMethodAnnotation(AllowInactive.class) && !user.active()) {
             throw new ForbiddenOperationException("The account is deactivated, activate it first");
         }
     }

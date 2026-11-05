@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -42,32 +43,33 @@ class AuthenticationServiceDeactivatedTest {
     }
 
     @Test
-    void deactivatedTraineeIsDeactivated() {
+    void deactivatedTraineeIsNotActive() {
         when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee(false)));
 
-        assertTrue(service.isDeactivated(JOHN));
+        assertFalse(service.authenticateAndLoad(JOHN).active());
     }
 
     @Test
-    void activeTraineeIsNotDeactivated() {
+    void activeTraineeIsActive() {
         when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee(true)));
 
-        assertFalse(service.isDeactivated(JOHN));
+        assertTrue(service.authenticateAndLoad(JOHN).active());
     }
 
     @Test
-    void deactivatedTrainerIsDeactivated() {
+    void deactivatedTrainerIsNotActive() {
         when(traineeDao.findByUsername("Anna.Brown")).thenReturn(Optional.empty());
         when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer(false)));
 
-        assertTrue(service.isDeactivated(ANNA));
+        assertFalse(service.authenticateAndLoad(ANNA).active());
     }
 
     @Test
-    void wrongPasswordIsNotReportedAsDeactivated() {
+    void wrongPasswordIsRejectedEvenForADeactivatedUser() {
         when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee(false)));
         when(trainerDao.findByUsername("John.Smith")).thenReturn(Optional.empty());
 
-        assertFalse(service.isDeactivated(new Credentials("John.Smith", "wrong")));
+        assertThrows(AuthenticationException.class,
+                () -> service.authenticateAndLoad(new Credentials("John.Smith", "wrong")));
     }
 }
