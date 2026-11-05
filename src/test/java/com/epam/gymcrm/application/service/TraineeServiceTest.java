@@ -86,6 +86,29 @@ class TraineeServiceTest {
     }
 
     @Test
+    void register_buildsTheTraineeFromTheCommandAndCreatesIt() {
+        when(usernameGenerator.generate("John", "Smith")).thenReturn("John.Smith");
+        when(passwordGenerator.generate()).thenReturn("pass123456");
+        when(traineeDao.save(any(Trainee.class))).thenAnswer(invocation -> {
+            Trainee toSave = invocation.getArgument(0);
+            return toSave.withId(1L);
+        });
+
+        Trainee result = service.register(new RegisterTrainee("John", "Smith", LocalDate.of(2000, 1, 1), "Astana"));
+
+        assertEquals(1L, result.id());
+        assertEquals("John.Smith", result.user().username());
+        assertEquals(LocalDate.of(2000, 1, 1), result.dateOfBirth());
+        assertEquals("Astana", result.address());
+    }
+
+    @Test
+    void register_withNullCommand_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register(null));
+        verifyNoInteractions(traineeDao);
+    }
+
+    @Test
     void create_withBlankFirstName_throwsAndSavesNothing() {
         Trainee invalid = new Trainee(null, User.of(" ", "Smith"), null, null);
 

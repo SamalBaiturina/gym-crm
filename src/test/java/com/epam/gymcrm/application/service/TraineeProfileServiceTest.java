@@ -80,9 +80,9 @@ class TraineeProfileServiceTest {
         when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee());
         when(traineeDao.save(any(Trainee.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(trainerDao.findAssignedTo("John.Smith")).thenReturn(List.of(trainer()));
-        Trainee changes = new Trainee(null, User.of("Johnny", "Smythe"), LocalDate.of(1999, 5, 5), "Almaty");
+        UpdateTrainee changes = new UpdateTrainee("Johnny", "Smythe", LocalDate.of(1999, 5, 5), "Almaty", false);
 
-        TraineeProfile profile = service.updateProfile(CREDENTIALS, changes, false);
+        TraineeProfile profile = service.updateProfile(CREDENTIALS, changes);
 
         User user = profile.trainee().user();
         assertEquals("Johnny", user.firstName());
@@ -98,9 +98,9 @@ class TraineeProfileServiceTest {
     @Test
     void updateProfileRejectsBlankName() {
         when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee());
-        Trainee changes = new Trainee(null, User.of(" ", "Smythe"), null, null);
+        UpdateTrainee changes = new UpdateTrainee(" ", "Smythe", null, null, true);
 
-        assertThrows(ValidationException.class, () -> service.updateProfile(CREDENTIALS, changes, true));
+        assertThrows(ValidationException.class, () -> service.updateProfile(CREDENTIALS, changes));
         verify(traineeDao, never()).save(any());
     }
 }

@@ -7,6 +7,7 @@ import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.logging.RestCallLoggingFilter;
 import com.epam.gymcrm.infrastructure.web.logging.TransactionIdFilter;
 import com.epam.gymcrm.support.LogCapture;
+import com.epam.gymcrm.application.service.RegisterTrainee;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,10 +80,11 @@ class LoggingIntegrationTest {
 
     @Test
     void registrationIsLoggedWithoutThePassword() throws Exception {
-        when(traineeService.create(any(Trainee.class))).thenAnswer(invocation -> {
-            Trainee trainee = invocation.getArgument(0);
-            User user = trainee.user().withCredentials("John.Smith", "secret12345");
-            return trainee.withId(1L).withUser(user);
+        when(traineeService.register(any(RegisterTrainee.class))).thenAnswer(invocation -> {
+            RegisterTrainee command = invocation.getArgument(0);
+            User user = User.of(command.firstName(), command.lastName())
+                    .withCredentials("John.Smith", "secret12345");
+            return new Trainee(1L, user, command.dateOfBirth(), command.address());
         });
 
         try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {

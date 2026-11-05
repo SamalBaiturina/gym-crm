@@ -1,8 +1,9 @@
 package com.epam.gymcrm.infrastructure.web.controller;
 
+import com.epam.gymcrm.application.service.RegisterTrainee;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainingService;
-import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.application.service.UpdateTrainee;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.dto.ActivationRequest;
@@ -71,11 +72,8 @@ public class TraineeController {
     @PublicEndpoint
     @PostMapping
     public CredentialsResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
-        Trainee trainee = new Trainee(null,
-                User.of(request.firstName(), request.lastName()),
-                request.dateOfBirth(),
-                request.address());
-        User created = traineeService.create(trainee).user();
+        User created = traineeService.register(new RegisterTrainee(request.firstName(), request.lastName(),
+                request.dateOfBirth(), request.address())).user();
         return new CredentialsResponse(created.username(), created.password());
     }
 
@@ -104,12 +102,9 @@ public class TraineeController {
     public TraineeProfileResponse update(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody UpdateTraineeRequest request) {
-        Trainee changes = new Trainee(null,
-                User.of(request.firstName(), request.lastName()),
-                request.dateOfBirth(),
-                request.address());
-        return TraineeProfileResponse.from(
-                traineeService.updateProfile(user.credentials(), changes, request.isActive()));
+        return TraineeProfileResponse.from(traineeService.updateProfile(user.credentials(),
+                new UpdateTrainee(request.firstName(), request.lastName(), request.dateOfBirth(),
+                        request.address(), request.isActive())));
     }
 
     /** Hard delete: the trainee's trainings are deleted with him. */

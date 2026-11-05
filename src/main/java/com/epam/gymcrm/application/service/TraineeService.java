@@ -7,6 +7,7 @@ import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
+import com.epam.gymcrm.domain.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,14 @@ public class TraineeService extends AbstractProfileService<Trainee> {
         return new Trainee(existing.id(), existing.user(), changes.dateOfBirth(), changes.address());
     }
 
+    /** Registers a trainee from the plain input of the use case; username and password are generated. */
+    @Transactional
+    public Trainee register(RegisterTrainee command) {
+        Validation.validated("register trainee", () -> Validation.requireNotNull(command, "trainee"));
+        return create(new Trainee(null, User.of(command.firstName(), command.lastName()),
+                command.dateOfBirth(), command.address()));
+    }
+
     /** Deletes the trainee; trainings are deleted by cascade. */
     @Transactional
     public void delete(Credentials credentials) {
@@ -73,8 +82,12 @@ public class TraineeService extends AbstractProfileService<Trainee> {
 
     /** Updates the profile, including the active flag, and returns it with the current trainers. */
     @Transactional
-    public TraineeProfile updateProfile(Credentials credentials, Trainee changes, boolean active) {
-        Trainee saved = updateWithActive(credentials, changes, active);
+    public TraineeProfile updateProfile(Credentials credentials, UpdateTrainee command) {
+        Validation.validated("update trainee username=" + credentials.username(),
+                () -> Validation.requireNotNull(command, "trainee"));
+        Trainee changes = new Trainee(null, User.of(command.firstName(), command.lastName()),
+                command.dateOfBirth(), command.address());
+        Trainee saved = updateWithActive(credentials, changes, command.active());
         return new TraineeProfile(saved, trainerDao.findAssignedTo(credentials.username()));
     }
 

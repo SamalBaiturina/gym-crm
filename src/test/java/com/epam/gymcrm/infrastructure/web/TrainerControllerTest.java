@@ -1,10 +1,11 @@
 package com.epam.gymcrm.infrastructure.web;
 
 import com.epam.gymcrm.application.service.TrainerService;
-import com.epam.gymcrm.application.service.TrainingTypeService;
 import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
+import com.epam.gymcrm.application.service.RegisterTrainer;
+import com.epam.gymcrm.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,19 +51,18 @@ class TrainerControllerTest {
     private WebApplicationContext webContext;
     @Autowired
     private TrainerService trainerService;
-    @Autowired
-    private TrainingTypeService trainingTypeService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        reset(trainerService, trainingTypeService);
+        reset(trainerService);
         mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
-        when(trainingTypeService.requireById(2L)).thenReturn(new TrainingType(2L, "YOGA"));
-        when(trainerService.create(any(Trainer.class))).thenAnswer(invocation -> {
-            Trainer trainer = invocation.getArgument(0);
-            return trainer.withId(5L).withUser(trainer.user().withCredentials("Anna.Brown", "secret12345"));
+        when(trainerService.register(any(RegisterTrainer.class))).thenAnswer(invocation -> {
+            RegisterTrainer command = invocation.getArgument(0);
+            User user = User.of(command.firstName(), command.lastName())
+                    .withCredentials("Anna.Brown", "secret12345");
+            return new Trainer(5L, user, new TrainingType(command.specializationId(), "YOGA"));
         });
     }
 
@@ -75,16 +75,16 @@ class TrainerControllerTest {
                 .andExpect(jsonPath("$.username").value("Anna.Brown"))
                 .andExpect(jsonPath("$.password").value("secret12345"));
 
-        ArgumentCaptor<Trainer> captor = ArgumentCaptor.forClass(Trainer.class);
-        verify(trainerService).create(captor.capture());
-        assertEquals("Anna", captor.getValue().user().firstName());
-        assertEquals("Brown", captor.getValue().user().lastName());
-        assertEquals("YOGA", captor.getValue().specialization().name());
+        ArgumentCaptor<RegisterTrainer> captor = ArgumentCaptor.forClass(RegisterTrainer.class);
+        verify(trainerService).register(captor.capture());
+        assertEquals("Anna", captor.getValue().firstName());
+        assertEquals("Brown", captor.getValue().lastName());
+        assertEquals(2L, captor.getValue().specializationId());
     }
 
     @Test
     void unknownSpecializationIs400() throws Exception {
-        when(trainingTypeService.requireById(99L))
+        when(trainerService.register(new RegisterTrainer("Anna", "Brown", 99L)))
                 .thenThrow(new ValidationException("Unknown training type id: 99"));
 
         mockMvc.perform(post("/trainers")
@@ -93,8 +93,6 @@ class TrainerControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.type").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.details[0]").value("Unknown training type id: 99"));
-
-        verifyNoInteractions(trainerService);
     }
 
     @ParameterizedTest
@@ -110,6 +108,6 @@ class TrainerControllerTest {
                         .content(body))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(trainerService, trainingTypeService);
+        verifyNoInteractions(trainerService);
     }
 }

@@ -6,6 +6,7 @@ import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.domain.model.TrainingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ public class TrainerService extends AbstractProfileService<Trainer> {
 
     private TrainerDao trainerDao;
     private TraineeDao traineeDao;
+    private TrainingTypeService trainingTypeService;
 
     public TrainerService() {
         super("trainer");
@@ -29,6 +31,11 @@ public class TrainerService extends AbstractProfileService<Trainer> {
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;
+    }
+
+    @Autowired
+    public void setTrainingTypeService(TrainingTypeService trainingTypeService) {
+        this.trainingTypeService = trainingTypeService;
     }
 
     @Override
@@ -51,6 +58,17 @@ public class TrainerService extends AbstractProfileService<Trainer> {
     protected void validateDetails(Trainer trainer) {
         Validation.requireNotNull(trainer.specialization(), "specialization");
         Validation.requireText(trainer.specialization().name(), "specialization");
+    }
+
+    /**
+     * Registers a trainer from the plain input of the use case: finds the specialization by id and creates
+     * the account in one transaction. An unknown specialization id is a mistake in the request.
+     */
+    @Transactional
+    public Trainer register(RegisterTrainer command) {
+        Validation.validated("register trainer", () -> Validation.requireNotNull(command, "trainer"));
+        TrainingType specialization = trainingTypeService.requireById(command.specializationId());
+        return create(new Trainer(null, User.of(command.firstName(), command.lastName()), specialization));
     }
 
     @Transactional(readOnly = true)

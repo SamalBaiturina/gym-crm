@@ -3,6 +3,7 @@ package com.epam.gymcrm.infrastructure.web;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.application.service.RegisterTrainee;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,10 +63,11 @@ class TraineeControllerTest {
     void setUp() {
         reset(traineeService);
         mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
-        when(traineeService.create(any(Trainee.class))).thenAnswer(invocation -> {
-            Trainee trainee = invocation.getArgument(0);
-            User user = trainee.user().withCredentials("John.Smith", "secret12345");
-            return trainee.withId(1L).withUser(user);
+        when(traineeService.register(any(RegisterTrainee.class))).thenAnswer(invocation -> {
+            RegisterTrainee command = invocation.getArgument(0);
+            User user = User.of(command.firstName(), command.lastName())
+                    .withCredentials("John.Smith", "secret12345");
+            return new Trainee(1L, user, command.dateOfBirth(), command.address());
         });
     }
 
@@ -81,11 +83,11 @@ class TraineeControllerTest {
                 .andExpect(jsonPath("$.username").value("John.Smith"))
                 .andExpect(jsonPath("$.password").value("secret12345"));
 
-        ArgumentCaptor<Trainee> captor = ArgumentCaptor.forClass(Trainee.class);
-        verify(traineeService).create(captor.capture());
-        Trainee sent = captor.getValue();
-        assertEquals("John", sent.user().firstName());
-        assertEquals("Smith", sent.user().lastName());
+        ArgumentCaptor<RegisterTrainee> captor = ArgumentCaptor.forClass(RegisterTrainee.class);
+        verify(traineeService).register(captor.capture());
+        RegisterTrainee sent = captor.getValue();
+        assertEquals("John", sent.firstName());
+        assertEquals("Smith", sent.lastName());
         assertEquals(LocalDate.of(2000, 1, 1), sent.dateOfBirth());
         assertEquals("Astana", sent.address());
     }
@@ -97,8 +99,8 @@ class TraineeControllerTest {
                         .content("{\"firstName\":\"John\",\"lastName\":\"Smith\"}"))
                 .andExpect(status().isOk());
 
-        ArgumentCaptor<Trainee> captor = ArgumentCaptor.forClass(Trainee.class);
-        verify(traineeService).create(captor.capture());
+        ArgumentCaptor<RegisterTrainee> captor = ArgumentCaptor.forClass(RegisterTrainee.class);
+        verify(traineeService).register(captor.capture());
         assertNull(captor.getValue().dateOfBirth());
         assertNull(captor.getValue().address());
     }

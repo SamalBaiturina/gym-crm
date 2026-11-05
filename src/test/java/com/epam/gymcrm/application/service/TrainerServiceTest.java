@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
@@ -36,6 +37,8 @@ class TrainerServiceTest {
     private PasswordGenerator passwordGenerator;
     @Mock
     private AuthenticationService authenticationService;
+    @Mock
+    private TrainingTypeService trainingTypeService;
     @InjectMocks
     private TrainerService service;
 
@@ -49,6 +52,38 @@ class TrainerServiceTest {
         ArgumentCaptor<Trainer> captor = ArgumentCaptor.forClass(Trainer.class);
         verify(trainerDao).save(captor.capture());
         return captor.getValue();
+    }
+
+    @Test
+    void register_resolvesTheSpecializationAndCreatesTheTrainer() {
+        when(trainingTypeService.requireById(2L)).thenReturn(new TrainingType(2L, "YOGA"));
+        when(usernameGenerator.generate("Anna", "Brown")).thenReturn("Anna.Brown");
+        when(passwordGenerator.generate()).thenReturn("pass123456");
+        when(trainerDao.save(any(Trainer.class))).thenAnswer(invocation -> {
+            Trainer toSave = invocation.getArgument(0);
+            return toSave.withId(5L);
+        });
+
+        Trainer result = service.register(new RegisterTrainer("Anna", "Brown", 2L));
+
+        assertEquals(5L, result.id());
+        assertEquals("Anna.Brown", result.user().username());
+        assertEquals("YOGA", result.specialization().name());
+    }
+
+    @Test
+    void register_withUnknownSpecialization_savesNothing() {
+        when(trainingTypeService.requireById(99L))
+                .thenThrow(new ValidationException("Unknown training type id: 99"));
+
+        assertThrows(ValidationException.class, () -> service.register(new RegisterTrainer("Anna", "Brown", 99L)));
+        verifyNoInteractions(trainerDao);
+    }
+
+    @Test
+    void register_withNullCommand_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register(null));
+        verifyNoInteractions(trainerDao);
     }
 
     @Test

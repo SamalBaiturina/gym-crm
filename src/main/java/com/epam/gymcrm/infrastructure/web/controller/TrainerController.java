@@ -1,11 +1,9 @@
 package com.epam.gymcrm.infrastructure.web.controller;
 
+import com.epam.gymcrm.application.service.RegisterTrainer;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
-import com.epam.gymcrm.application.service.TrainingTypeService;
-import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
-import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.dto.ActivationRequest;
 import com.epam.gymcrm.infrastructure.web.dto.CredentialsResponse;
@@ -53,13 +51,10 @@ public class TrainerController {
     private static final String OWN_USERNAME = "Username of the trainer; must be the caller's own";
 
     private final TrainerService trainerService;
-    private final TrainingTypeService trainingTypeService;
     private final TrainingService trainingService;
 
-    public TrainerController(TrainerService trainerService, TrainingTypeService trainingTypeService,
-                             TrainingService trainingService) {
+    public TrainerController(TrainerService trainerService, TrainingService trainingService) {
         this.trainerService = trainerService;
-        this.trainingTypeService = trainingTypeService;
         this.trainingService = trainingService;
     }
 
@@ -73,9 +68,8 @@ public class TrainerController {
     @PublicEndpoint
     @PostMapping
     public CredentialsResponse register(@Valid @RequestBody TrainerRegistrationRequest request) {
-        TrainingType specialization = trainingTypeService.requireById(request.specializationId());
-        Trainer trainer = new Trainer(null, User.of(request.firstName(), request.lastName()), specialization);
-        User created = trainerService.create(trainer).user();
+        User created = trainerService.register(new RegisterTrainer(request.firstName(), request.lastName(),
+                request.specializationId())).user();
         return new CredentialsResponse(created.username(), created.password());
     }
 

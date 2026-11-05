@@ -9,6 +9,7 @@ import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
+import com.epam.gymcrm.application.service.UpdateTrainee;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,7 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
@@ -129,7 +131,7 @@ class TraineeProfileControllerTest {
 
     @Test
     void updateSendsTheChangesAndReturnsTheProfile() throws Exception {
-        when(traineeService.updateProfile(eq(JOHN), any(Trainee.class), eq(false)))
+        when(traineeService.updateProfile(eq(JOHN), any(UpdateTrainee.class)))
                 .thenReturn(new TraineeProfile(trainee("Johnny", false), List.of()));
 
         mockMvc.perform(put("/trainees/John.Smith")
@@ -144,13 +146,14 @@ class TraineeProfileControllerTest {
                 .andExpect(jsonPath("$.isActive").value(false))
                 .andExpect(jsonPath("$.trainers.length()").value(0));
 
-        ArgumentCaptor<Trainee> captor = ArgumentCaptor.forClass(Trainee.class);
-        verify(traineeService).updateProfile(eq(JOHN), captor.capture(), eq(false));
-        Trainee sent = captor.getValue();
-        assertEquals("Johnny", sent.user().firstName());
-        assertEquals("Smythe", sent.user().lastName());
+        ArgumentCaptor<UpdateTrainee> captor = ArgumentCaptor.forClass(UpdateTrainee.class);
+        verify(traineeService).updateProfile(eq(JOHN), captor.capture());
+        UpdateTrainee sent = captor.getValue();
+        assertEquals("Johnny", sent.firstName());
+        assertEquals("Smythe", sent.lastName());
         assertEquals(LocalDate.of(1999, 5, 5), sent.dateOfBirth());
         assertEquals("Almaty", sent.address());
+        assertFalse(sent.active());
     }
 
     @ParameterizedTest
