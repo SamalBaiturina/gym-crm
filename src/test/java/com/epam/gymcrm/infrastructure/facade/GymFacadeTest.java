@@ -5,8 +5,10 @@ import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -55,6 +57,18 @@ class GymFacadeTest {
             new TrainingType("YOGA"));
     private final Training training = new Training(1L, trainee, trainer, "Yoga", new TrainingType("YOGA"), FROM, 60);
 
+    /** The facade checks the password once, then hands the services an already authenticated trainee. */
+    private AuthenticatedUser givenTraineeAuthenticated() {
+        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee);
+        return new AuthenticatedUser(CREDENTIALS, Role.TRAINEE, true);
+    }
+
+    /** The facade checks the password once, then hands the services an already authenticated trainer. */
+    private AuthenticatedUser givenTrainerAuthenticated() {
+        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenReturn(trainer);
+        return new AuthenticatedUser(CREDENTIALS, Role.TRAINER, true);
+    }
+
     @Test
     void createTrainer_delegates() {
         when(trainerService.create(trainer)).thenReturn(trainer);
@@ -85,75 +99,84 @@ class GymFacadeTest {
 
     @Test
     void getTrainer_delegates() {
-        when(trainerService.getByUsername(CREDENTIALS)).thenReturn(trainer);
+        AuthenticatedUser user = givenTrainerAuthenticated();
+        when(trainerService.getByUsername(user)).thenReturn(trainer);
 
         assertSame(trainer, facade.getTrainer(CREDENTIALS));
     }
 
     @Test
     void getTrainee_delegates() {
-        when(traineeService.getByUsername(CREDENTIALS)).thenReturn(trainee);
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(traineeService.getByUsername(user)).thenReturn(trainee);
 
         assertSame(trainee, facade.getTrainee(CREDENTIALS));
     }
 
     @Test
     void changeTraineePassword_delegates() {
-        PasswordChange change = new PasswordChange(CREDENTIALS, "new");
+        AuthenticatedUser user = givenTraineeAuthenticated();
 
-        facade.changeTraineePassword(change);
+        facade.changeTraineePassword(new PasswordChange(CREDENTIALS, "new"));
 
-        verify(traineeService).changePassword(change);
+        verify(traineeService).changePassword(user, "new");
     }
 
     @Test
     void changeTrainerPassword_delegates() {
-        PasswordChange change = new PasswordChange(CREDENTIALS, "new");
+        AuthenticatedUser user = givenTrainerAuthenticated();
 
-        facade.changeTrainerPassword(change);
+        facade.changeTrainerPassword(new PasswordChange(CREDENTIALS, "new"));
 
-        verify(trainerService).changePassword(change);
+        verify(trainerService).changePassword(user, "new");
     }
 
     @Test
     void updateTrainer_delegates() {
-        when(trainerService.update(CREDENTIALS, trainer)).thenReturn(trainer);
+        AuthenticatedUser user = givenTrainerAuthenticated();
+        when(trainerService.update(user, trainer)).thenReturn(trainer);
 
         assertSame(trainer, facade.updateTrainer(CREDENTIALS, trainer));
     }
 
     @Test
     void updateTrainee_delegates() {
-        when(traineeService.update(CREDENTIALS, trainee)).thenReturn(trainee);
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(traineeService.update(user, trainee)).thenReturn(trainee);
 
         assertSame(trainee, facade.updateTrainee(CREDENTIALS, trainee));
     }
 
     @Test
     void toggleTraineeActive_delegates() {
-        when(traineeService.toggleActive(CREDENTIALS)).thenReturn(false);
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(traineeService.toggleActive(user)).thenReturn(false);
 
         assertFalse(facade.toggleTraineeActive(CREDENTIALS));
     }
 
     @Test
     void toggleTrainerActive_delegates() {
-        when(trainerService.toggleActive(CREDENTIALS)).thenReturn(true);
+        AuthenticatedUser user = givenTrainerAuthenticated();
+        when(trainerService.toggleActive(user)).thenReturn(true);
 
         assertTrue(facade.toggleTrainerActive(CREDENTIALS));
     }
 
     @Test
     void deleteTrainee_delegates() {
+        AuthenticatedUser user = givenTraineeAuthenticated();
+
         facade.deleteTrainee(CREDENTIALS);
 
-        verify(traineeService).delete(CREDENTIALS);
+        verify(traineeService).delete(user);
     }
 
     @Test
     void getTraineeTrainings_delegates() {
         TraineeTrainingCriteria criteria = new TraineeTrainingCriteria(FROM, TO, "Anna", "YOGA");
-        when(trainingService.getTraineeTrainings(CREDENTIALS, criteria)).thenReturn(List.of(training));
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(trainingService.getTraineeTrainings(user, criteria)).thenReturn(List.of(training));
 
         assertSame(training, facade.getTraineeTrainings(CREDENTIALS, criteria).get(0));
     }
@@ -161,7 +184,8 @@ class GymFacadeTest {
     @Test
     void getTrainerTrainings_delegates() {
         TrainerTrainingCriteria criteria = new TrainerTrainingCriteria(FROM, TO, "John");
-        when(trainingService.getTrainerTrainings(CREDENTIALS, criteria)).thenReturn(List.of(training));
+        AuthenticatedUser user = givenTrainerAuthenticated();
+        when(trainingService.getTrainerTrainings(user, criteria)).thenReturn(List.of(training));
 
         assertSame(training, facade.getTrainerTrainings(CREDENTIALS, criteria).get(0));
     }
@@ -177,14 +201,16 @@ class GymFacadeTest {
 
     @Test
     void getNotAssignedTrainers_delegates() {
-        when(traineeService.getNotAssignedTrainers(CREDENTIALS)).thenReturn(List.of(trainer));
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(traineeService.getNotAssignedTrainers(user)).thenReturn(List.of(trainer));
 
         assertSame(trainer, facade.getNotAssignedTrainers(CREDENTIALS).get(0));
     }
 
     @Test
     void updateTraineeTrainers_delegates() {
-        when(traineeService.updateTrainers(CREDENTIALS, List.of("Anna.Brown"))).thenReturn(List.of(trainer));
+        AuthenticatedUser user = givenTraineeAuthenticated();
+        when(traineeService.updateTrainers(user, List.of("Anna.Brown"))).thenReturn(List.of(trainer));
 
         assertSame(trainer, facade.updateTraineeTrainers(CREDENTIALS, List.of("Anna.Brown")).get(0));
     }

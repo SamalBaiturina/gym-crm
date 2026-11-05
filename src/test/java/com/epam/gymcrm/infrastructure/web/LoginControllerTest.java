@@ -5,7 +5,6 @@ import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.domain.model.Credentials;
-import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,7 +146,7 @@ class LoginControllerTest {
                         .content("{\"newPassword\":\"newSecret1\"}"))
                 .andExpect(status().isOk());
 
-        verify(traineeService).changePassword(new PasswordChange(JOHN, "newSecret1"));
+        verify(traineeService).changePassword(new AuthenticatedUser(JOHN, Role.TRAINEE, true), "newSecret1");
         verifyNoInteractions(trainerService);
     }
 
@@ -161,7 +160,7 @@ class LoginControllerTest {
                         .content("{\"newPassword\":\"newSecret1\"}"))
                 .andExpect(status().isOk());
 
-        verify(trainerService).changePassword(new PasswordChange(JOHN, "newSecret1"));
+        verify(trainerService).changePassword(new AuthenticatedUser(JOHN, Role.TRAINER, true), "newSecret1");
         verifyNoInteractions(traineeService);
     }
 

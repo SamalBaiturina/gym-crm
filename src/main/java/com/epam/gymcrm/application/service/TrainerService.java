@@ -3,7 +3,8 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
-import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -20,7 +21,7 @@ public class TrainerService extends AbstractProfileService<Trainer> {
     private TrainingTypeService trainingTypeService;
 
     public TrainerService() {
-        super("trainer");
+        super(Role.TRAINER);
     }
 
     @Autowired
@@ -41,11 +42,6 @@ public class TrainerService extends AbstractProfileService<Trainer> {
     @Override
     protected ProfileDao<Trainer> dao() {
         return trainerDao;
-    }
-
-    @Override
-    protected Trainer authenticate(Credentials credentials) {
-        return authentication().authenticateTrainer(credentials);
     }
 
     /** The specialization is the trainer's own field. */
@@ -72,9 +68,9 @@ public class TrainerService extends AbstractProfileService<Trainer> {
     }
 
     @Transactional(readOnly = true)
-    public TrainerProfile getProfile(Credentials credentials) {
-        Trainer trainer = authenticate(credentials);
-        return new TrainerProfile(trainer, traineeDao.findAssignedTo(credentials.username()));
+    public TrainerProfile getProfile(AuthenticatedUser user) {
+        Trainer trainer = load(user);
+        return new TrainerProfile(trainer, traineeDao.findAssignedTo(user.username()));
     }
 
     /**
@@ -82,11 +78,11 @@ public class TrainerService extends AbstractProfileService<Trainer> {
      * so the one the trainer already has is kept.
      */
     @Transactional
-    public TrainerProfile updateProfile(Credentials credentials, String firstName, String lastName,
+    public TrainerProfile updateProfile(AuthenticatedUser user, String firstName, String lastName,
                                         boolean active) {
-        Trainer current = authenticate(credentials);
+        Trainer current = load(user);
         Trainer changes = new Trainer(current.id(), User.of(firstName, lastName), current.specialization());
-        Trainer saved = updateWithActive(credentials, changes, active);
-        return new TrainerProfile(saved, traineeDao.findAssignedTo(credentials.username()));
+        Trainer saved = updateWithActive(user, changes, active);
+        return new TrainerProfile(saved, traineeDao.findAssignedTo(user.username()));
     }
 }

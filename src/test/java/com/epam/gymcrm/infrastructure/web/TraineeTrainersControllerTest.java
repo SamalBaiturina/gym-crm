@@ -54,6 +54,7 @@ class TraineeTrainersControllerTest {
     }
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
+    private static final AuthenticatedUser JOHN_USER = new AuthenticatedUser(JOHN, Role.TRAINEE, true);
     private static final String JOHN_HEADER = "Basic " + Base64.getEncoder()
             .encodeToString("John.Smith:secret12345".getBytes(StandardCharsets.UTF_8));
 
@@ -80,7 +81,7 @@ class TraineeTrainersControllerTest {
 
     @Test
     void notAssignedTrainersAreListed() throws Exception {
-        when(traineeService.getNotAssignedTrainers(JOHN))
+        when(traineeService.getNotAssignedTrainers(JOHN_USER))
                 .thenReturn(List.of(trainer(5L, "Anna", "Brown", "YOGA")));
 
         mockMvc.perform(get("/trainees/John.Smith/not-assigned-trainers")
@@ -105,7 +106,7 @@ class TraineeTrainersControllerTest {
 
     @Test
     void updateTrainersSendsUsernamesAndReturnsTheNewList() throws Exception {
-        when(traineeService.updateTrainers(JOHN, List.of("Anna.Brown", "Bob.White")))
+        when(traineeService.updateTrainers(JOHN_USER, List.of("Anna.Brown", "Bob.White")))
                 .thenReturn(List.of(trainer(5L, "Anna", "Brown", "YOGA"), trainer(6L, "Bob", "White", "FITNESS")));
 
         mockMvc.perform(put("/trainees/John.Smith/trainers")
@@ -117,7 +118,7 @@ class TraineeTrainersControllerTest {
                 .andExpect(jsonPath("$[0].username").value("Anna.Brown"))
                 .andExpect(jsonPath("$[1].username").value("Bob.White"));
 
-        verify(traineeService).updateTrainers(JOHN, List.of("Anna.Brown", "Bob.White"));
+        verify(traineeService).updateTrainers(JOHN_USER, List.of("Anna.Brown", "Bob.White"));
     }
 
     @Test
@@ -129,12 +130,12 @@ class TraineeTrainersControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(traineeService).updateTrainers(JOHN, List.of());
+        verify(traineeService).updateTrainers(JOHN_USER, List.of());
     }
 
     @Test
     void unknownTrainerIs404() throws Exception {
-        when(traineeService.updateTrainers(JOHN, List.of("Zed.Nobody")))
+        when(traineeService.updateTrainers(JOHN_USER, List.of("Zed.Nobody")))
                 .thenThrow(new NotFoundException("Trainers not found: [Zed.Nobody]"));
 
         mockMvc.perform(put("/trainees/John.Smith/trainers")

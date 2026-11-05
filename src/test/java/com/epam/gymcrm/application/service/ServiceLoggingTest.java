@@ -5,7 +5,9 @@ import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
@@ -37,7 +39,8 @@ import static org.mockito.Mockito.when;
 class ServiceLoggingTest {
 
     private static final Credentials TRAINER = new Credentials("Anna.Brown", "secret");
-    private static final Credentials TRAINEE = new Credentials("John.Smith", "secret");
+    private static final AuthenticatedUser TRAINEE =
+            new AuthenticatedUser(new Credentials("John.Smith", "secret"), Role.TRAINEE, true);
     private static final LocalDate DATE = LocalDate.of(2026, 1, 10);
 
     @Mock
@@ -50,8 +53,6 @@ class ServiceLoggingTest {
     private UsernameGenerator usernameGenerator;
     @Mock
     private PasswordGenerator passwordGenerator;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TrainingService trainingService;
     @InjectMocks
@@ -135,7 +136,7 @@ class ServiceLoggingTest {
 
     @Test
     void update_withBlankLastName_logsValidationWarningWithUsername() {
-        when(authenticationService.authenticateTrainee(TRAINEE)).thenReturn(trainee());
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
         Trainee changes = new Trainee(null, User.of("Johnny", ""), null, null);
 
         try (LogCapture logs = new LogCapture(Validation.class)) {
@@ -148,7 +149,7 @@ class ServiceLoggingTest {
 
     @Test
     void updateTrainers_withUnknownTrainer_logsWarning() {
-        when(authenticationService.authenticateTrainee(TRAINEE)).thenReturn(trainee());
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
         when(trainerDao.findByUsernames(Set.of("nobody"))).thenReturn(List.of());
 
         try (LogCapture logs = new LogCapture(TraineeService.class)) {

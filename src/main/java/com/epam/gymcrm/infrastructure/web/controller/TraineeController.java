@@ -87,7 +87,7 @@ public class TraineeController {
     @GetMapping("/{username}")
     public TraineeProfileResponse get(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
-        return TraineeProfileResponse.from(traineeService.getProfile(user.credentials()));
+        return TraineeProfileResponse.from(traineeService.getProfile(user));
     }
 
     @Operation(summary = "Update the trainee profile",
@@ -102,7 +102,7 @@ public class TraineeController {
     public TraineeProfileResponse update(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody UpdateTraineeRequest request) {
-        return TraineeProfileResponse.from(traineeService.updateProfile(user.credentials(),
+        return TraineeProfileResponse.from(traineeService.updateProfile(user,
                 new UpdateTrainee(request.firstName(), request.lastName(), request.dateOfBirth(),
                         request.address(), request.isActive())));
     }
@@ -118,7 +118,7 @@ public class TraineeController {
     @DeleteMapping("/{username}")
     public void delete(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
-        traineeService.delete(user.credentials());
+        traineeService.delete(user);
     }
 
     /** Flips the trainee's active flag on every call (not idempotent). */
@@ -137,7 +137,7 @@ public class TraineeController {
     public void toggleActive(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody ActivationRequest request) {
-        traineeService.toggleActive(user.credentials());
+        traineeService.toggleActive(user);
     }
 
     /** Active trainers that are not assigned to the trainee yet. */
@@ -150,7 +150,7 @@ public class TraineeController {
     @GetMapping("/{username}/not-assigned-trainers")
     public List<TrainerSummaryResponse> notAssignedTrainers(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
-        return traineeService.getNotAssignedTrainers(user.credentials()).stream()
+        return traineeService.getNotAssignedTrainers(user).stream()
                 .map(TrainerSummaryResponse::from)
                 .toList();
     }
@@ -172,7 +172,7 @@ public class TraineeController {
         List<String> usernames = request.trainers().stream()
                 .map(TrainerUsernameRequest::username)
                 .toList();
-        return traineeService.updateTrainers(user.credentials(), usernames).stream()
+        return traineeService.updateTrainers(user, usernames).stream()
                 .map(TrainerSummaryResponse::from)
                 .toList();
     }
@@ -203,7 +203,7 @@ public class TraineeController {
             @RequestParam(name = "trainingType", required = false) String trainingType) {
         TraineeTrainingCriteria criteria =
                 new TraineeTrainingCriteria(periodFrom, periodTo, trainerName, trainingType);
-        return trainingService.getTraineeTrainings(user.credentials(), criteria).stream()
+        return trainingService.getTraineeTrainings(user, criteria).stream()
                 .map(TraineeTrainingResponse::from)
                 .toList();
     }

@@ -2,7 +2,6 @@ package com.epam.gymcrm.infrastructure.web.controller;
 
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
-import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.infrastructure.web.dto.ChangePasswordRequest;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,10 +55,9 @@ public class LoginController {
     public void changePassword(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody ChangePasswordRequest request) {
-        PasswordChange change = new PasswordChange(user.credentials(), request.newPassword());
         switch (user.role()) {
-            case TRAINEE -> traineeService.changePassword(change);
-            case TRAINER -> trainerService.changePassword(change);
+            case TRAINEE -> traineeService.changePassword(user, request.newPassword());
+            case TRAINER -> trainerService.changePassword(user, request.newPassword());
         }
     }
 }

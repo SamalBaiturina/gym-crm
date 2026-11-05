@@ -4,7 +4,8 @@ import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.exception.NotFoundException;
-import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.User;
@@ -29,7 +30,7 @@ public class TraineeService extends AbstractProfileService<Trainee> {
     private TrainerDao trainerDao;
 
     public TraineeService() {
-        super("trainee");
+        super(Role.TRAINEE);
     }
 
     @Autowired
@@ -45,11 +46,6 @@ public class TraineeService extends AbstractProfileService<Trainee> {
     @Override
     protected ProfileDao<Trainee> dao() {
         return traineeDao;
-    }
-
-    @Override
-    protected Trainee authenticate(Credentials credentials) {
-        return authentication().authenticateTrainee(credentials);
     }
 
     /** Date of birth and address are the trainee's own fields. */
@@ -68,40 +64,40 @@ public class TraineeService extends AbstractProfileService<Trainee> {
 
     /** Deletes the trainee; trainings are deleted by cascade. */
     @Transactional
-    public void delete(Credentials credentials) {
-        Trainee trainee = authenticate(credentials);
+    public void delete(AuthenticatedUser user) {
+        Trainee trainee = load(user);
         traineeDao.delete(trainee);
-        log.info("Deleted trainee username={}", credentials.username());
+        log.info("Deleted trainee username={}", user.username());
     }
 
     @Transactional(readOnly = true)
-    public TraineeProfile getProfile(Credentials credentials) {
-        Trainee trainee = authenticate(credentials);
-        return new TraineeProfile(trainee, trainerDao.findAssignedTo(credentials.username()));
+    public TraineeProfile getProfile(AuthenticatedUser user) {
+        Trainee trainee = load(user);
+        return new TraineeProfile(trainee, trainerDao.findAssignedTo(user.username()));
     }
 
     /** Updates the profile, including the active flag, and returns it with the current trainers. */
     @Transactional
-    public TraineeProfile updateProfile(Credentials credentials, UpdateTrainee command) {
-        Validation.validated("update trainee username=" + credentials.username(),
+    public TraineeProfile updateProfile(AuthenticatedUser user, UpdateTrainee command) {
+        Validation.validated("update trainee username=" + user.username(),
                 () -> Validation.requireNotNull(command, "trainee"));
         Trainee changes = new Trainee(null, User.of(command.firstName(), command.lastName()),
                 command.dateOfBirth(), command.address());
-        Trainee saved = updateWithActive(credentials, changes, command.active());
-        return new TraineeProfile(saved, trainerDao.findAssignedTo(credentials.username()));
+        Trainee saved = updateWithActive(user, changes, command.active());
+        return new TraineeProfile(saved, trainerDao.findAssignedTo(user.username()));
     }
 
     @Transactional(readOnly = true)
-    public List<Trainer> getNotAssignedTrainers(Credentials credentials) {
-        authenticate(credentials);
-        return trainerDao.findNotAssignedTo(credentials.username());
+    public List<Trainer> getNotAssignedTrainers(AuthenticatedUser user) {
+        user.requireRole(Role.TRAINEE);
+        return trainerDao.findNotAssignedTo(user.username());
     }
 
     /** Replaces the trainee's trainers with the given ones. */
     @Transactional
-    public List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames) {
-        Trainee trainee = authenticate(credentials);
-        Validation.validated("update trainers of trainee username=" + credentials.username(),
+    public List<Trainer> updateTrainers(AuthenticatedUser user, List<String> trainerUsernames) {
+        Trainee trainee = load(user);
+        Validation.validated("update trainers of trainee username=" + user.username(),
                 () -> Validation.requireNotNull(trainerUsernames, "trainerUsernames"));
 
         Set<String> requested = new HashSet<>(trainerUsernames);
@@ -110,11 +106,11 @@ public class TraineeService extends AbstractProfileService<Trainee> {
             Set<String> found = trainers.stream().map(t -> t.user().username()).collect(Collectors.toSet());
             requested.removeAll(found);
             log.warn("Cannot update trainers of trainee username={}: trainers not found {}",
-                    credentials.username(), requested);
+                    user.username(), requested);
             throw new NotFoundException("Trainers not found: " + requested);
         }
         traineeDao.updateTrainers(trainee, trainers);
-        log.info("Updated trainers of trainee username={}, count={}", credentials.username(), trainers.size());
+        log.info("Updated trainers of trainee username={}, count={}", user.username(), trainers.size());
         return trainers;
     }
 }

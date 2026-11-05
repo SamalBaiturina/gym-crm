@@ -1,7 +1,10 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -28,13 +31,13 @@ import static org.mockito.Mockito.when;
 class TrainingServiceTest {
 
     private static final LocalDate DATE = LocalDate.of(2026, 1, 10);
-    private static final Credentials TRAINER_CREDENTIALS = new Credentials("Anna.Brown", "secret");
-    private static final Credentials TRAINEE_CREDENTIALS = new Credentials("John.Smith", "secret");
+    private static final AuthenticatedUser TRAINER_USER =
+            new AuthenticatedUser(new Credentials("Anna.Brown", "secret"), Role.TRAINER, true);
+    private static final AuthenticatedUser TRAINEE_USER =
+            new AuthenticatedUser(new Credentials("John.Smith", "secret"), Role.TRAINEE, true);
 
     @Mock
     private TrainingDao trainingDao;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TrainingService service;
 
@@ -59,26 +62,22 @@ class TrainingServiceTest {
         List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainee("John.Smith", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTraineeTrainings(TRAINEE_CREDENTIALS, criteria);
+        List<Training> result = service.getTraineeTrainings(TRAINEE_USER, criteria);
 
         assertSame(trainings, result);
-        verify(authenticationService).authenticateTrainee(TRAINEE_CREDENTIALS);
     }
 
     @Test
-    void getTraineeTrainings_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainee(TRAINEE_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, TraineeTrainingCriteria.any()));
+    void getTraineeTrainings_forTrainerUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class,
+                () -> service.getTraineeTrainings(TRAINER_USER, TraineeTrainingCriteria.any()));
         verifyNoInteractions(trainingDao);
     }
 
     @Test
     void getTraineeTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, null));
+                () -> service.getTraineeTrainings(TRAINEE_USER, null));
         verifyNoInteractions(trainingDao);
     }
 
@@ -88,26 +87,22 @@ class TrainingServiceTest {
         List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainer("Anna.Brown", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTrainerTrainings(TRAINER_CREDENTIALS, criteria);
+        List<Training> result = service.getTrainerTrainings(TRAINER_USER, criteria);
 
         assertSame(trainings, result);
-        verify(authenticationService).authenticateTrainer(TRAINER_CREDENTIALS);
     }
 
     @Test
-    void getTrainerTrainings_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, TrainerTrainingCriteria.any()));
+    void getTrainerTrainings_forTraineeUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class,
+                () -> service.getTrainerTrainings(TRAINEE_USER, TrainerTrainingCriteria.any()));
         verifyNoInteractions(trainingDao);
     }
 
     @Test
     void getTrainerTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, null));
+                () -> service.getTrainerTrainings(TRAINER_USER, null));
         verifyNoInteractions(trainingDao);
     }
 }

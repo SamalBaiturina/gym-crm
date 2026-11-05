@@ -49,6 +49,8 @@ class ActivationControllerTest {
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
     private static final Credentials ANNA = new Credentials("Anna.Brown", "secret12345");
+    private static final AuthenticatedUser JOHN_USER = new AuthenticatedUser(JOHN, Role.TRAINEE, true);
+    private static final AuthenticatedUser ANNA_USER = new AuthenticatedUser(ANNA, Role.TRAINER, true);
 
     @Autowired
     private WebApplicationContext webContext;
@@ -82,7 +84,7 @@ class ActivationControllerTest {
                         .content("{\"isActive\":false}"))
                 .andExpect(status().isOk());
 
-        verify(traineeService).toggleActive(JOHN);
+        verify(traineeService).toggleActive(JOHN_USER);
     }
 
     @Test
@@ -93,7 +95,7 @@ class ActivationControllerTest {
                         .content("{\"isActive\":true}"))
                 .andExpect(status().isOk());
 
-        verify(traineeService).toggleActive(JOHN);
+        verify(traineeService).toggleActive(JOHN_USER);
     }
 
     @Test
@@ -104,7 +106,7 @@ class ActivationControllerTest {
                         .content("{\"isActive\":false}"))
                 .andExpect(status().isOk());
 
-        verify(trainerService).toggleActive(ANNA);
+        verify(trainerService).toggleActive(ANNA_USER);
     }
 
     @ParameterizedTest

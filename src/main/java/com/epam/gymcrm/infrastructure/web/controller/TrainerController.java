@@ -82,7 +82,7 @@ public class TrainerController {
     @GetMapping("/{username}")
     public TrainerProfileResponse get(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user) {
-        return TrainerProfileResponse.from(trainerService.getProfile(user.credentials()));
+        return TrainerProfileResponse.from(trainerService.getProfile(user));
     }
 
     @Operation(summary = "Update the trainer profile",
@@ -98,7 +98,7 @@ public class TrainerController {
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody UpdateTrainerRequest request) {
         return TrainerProfileResponse.from(trainerService.updateProfile(
-                user.credentials(), request.firstName(), request.lastName(), request.isActive()));
+                user, request.firstName(), request.lastName(), request.isActive()));
     }
 
     /** Flips the trainer's active flag on every call (not idempotent). */
@@ -117,7 +117,7 @@ public class TrainerController {
     public void toggleActive(
             @Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
             @Valid @RequestBody ActivationRequest request) {
-        trainerService.toggleActive(user.credentials());
+        trainerService.toggleActive(user);
     }
 
     /** Trainings of the trainer. All parameters are optional: dates as yyyy-MM-dd and the trainee's first name. */
@@ -140,7 +140,7 @@ public class TrainerController {
             @Parameter(description = "First name of the trainee")
             @RequestParam(name = "traineeName", required = false) String traineeName) {
         TrainerTrainingCriteria criteria = new TrainerTrainingCriteria(periodFrom, periodTo, traineeName);
-        return trainingService.getTrainerTrainings(user.credentials(), criteria).stream()
+        return trainingService.getTrainerTrainings(user, criteria).stream()
                 .map(TrainerTrainingResponse::from)
                 .toList();
     }

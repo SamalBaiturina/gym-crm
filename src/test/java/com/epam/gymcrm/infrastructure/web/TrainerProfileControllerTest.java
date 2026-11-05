@@ -56,6 +56,7 @@ class TrainerProfileControllerTest {
     }
 
     private static final Credentials ANNA = new Credentials("Anna.Brown", "secret12345");
+    private static final AuthenticatedUser ANNA_USER = new AuthenticatedUser(ANNA, Role.TRAINER, true);
     private static final String ANNA_HEADER = "Basic " + Base64.getEncoder()
             .encodeToString("Anna.Brown:secret12345".getBytes(StandardCharsets.UTF_8));
 
@@ -87,7 +88,7 @@ class TrainerProfileControllerTest {
 
     @Test
     void getReturnsTheProfileWithTrainees() throws Exception {
-        when(trainerService.getProfile(ANNA)).thenReturn(new TrainerProfile(trainer("Anna", true), List.of(john())));
+        when(trainerService.getProfile(ANNA_USER)).thenReturn(new TrainerProfile(trainer("Anna", true), List.of(john())));
 
         mockMvc.perform(get("/trainers/Anna.Brown").header(HttpHeaders.AUTHORIZATION, ANNA_HEADER))
                 .andExpect(status().isOk())
@@ -114,7 +115,7 @@ class TrainerProfileControllerTest {
 
     @Test
     void updateIgnoresTheSpecializationFromTheRequest() throws Exception {
-        when(trainerService.updateProfile(ANNA, "Annie", "Braun", false))
+        when(trainerService.updateProfile(ANNA_USER, "Annie", "Braun", false))
                 .thenReturn(new TrainerProfile(trainer("Annie", false), List.of()));
 
         mockMvc.perform(put("/trainers/Anna.Brown")
@@ -128,7 +129,7 @@ class TrainerProfileControllerTest {
                 .andExpect(jsonPath("$.isActive").value(false))
                 .andExpect(jsonPath("$.specialization.name").value("YOGA"));
 
-        verify(trainerService).updateProfile(ANNA, "Annie", "Braun", false);
+        verify(trainerService).updateProfile(ANNA_USER, "Annie", "Braun", false);
     }
 
     @ParameterizedTest

@@ -2,8 +2,11 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.exception.NotFoundException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
-import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -18,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,6 +39,8 @@ import static org.mockito.Mockito.when;
 class TraineeServiceTest {
 
     private static final Credentials CREDENTIALS = new Credentials("John.Smith", "secret");
+    private static final AuthenticatedUser USER = new AuthenticatedUser(CREDENTIALS, Role.TRAINEE, true);
+    private static final AuthenticatedUser TRAINER_USER = new AuthenticatedUser(CREDENTIALS, Role.TRAINER, true);
 
     @Mock
     private TraineeDao traineeDao;
@@ -44,8 +50,6 @@ class TraineeServiceTest {
     private UsernameGenerator usernameGenerator;
     @Mock
     private PasswordGenerator passwordGenerator;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TraineeService service;
 
@@ -54,9 +58,9 @@ class TraineeServiceTest {
         return new Trainee(1L, user, LocalDate.of(2000, 1, 1), "Astana");
     }
 
-    private Trainee givenAuthenticatedTrainee(boolean active) {
+    private Trainee givenStoredTrainee(boolean active) {
         Trainee trainee = existingTrainee(active);
-        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenReturn(trainee);
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee));
         return trainee;
     }
 
@@ -125,38 +129,40 @@ class TraineeServiceTest {
 
     @Test
     void getByUsername_returnsAuthenticatedTrainee() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
 
-        Trainee result = service.getByUsername(CREDENTIALS);
+        Trainee result = service.getByUsername(USER);
 
         assertEquals(1L, result.id());
     }
 
     @Test
-    void getByUsername_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class, () -> service.getByUsername(CREDENTIALS));
+    void getByUsername_forTrainerUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class, () -> service.getByUsername(TRAINER_USER));
         verifyNoInteractions(traineeDao);
+    }
+
+    @Test
+    void getByUsername_whenTheAccountIsGone_throwsNotFound() {
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> service.getByUsername(USER));
     }
 
     // ---------- change password ----------
 
     @Test
     void changePassword_savesNewPassword() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
 
-        service.changePassword(new PasswordChange(CREDENTIALS, "newPass"));
+        service.changePassword(USER, "newPass");
 
         assertEquals("newPass", savedTrainee().user().password());
     }
 
     @Test
-    void changePassword_withWrongOldPassword_throwsAndSavesNothing() {
-        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.changePassword(new PasswordChange(CREDENTIALS, "newPass")));
+    void changePassword_withBlankPassword_throwsAndSavesNothing() {
+        assertThrows(IllegalArgumentException.class, () -> service.changePassword(USER, " "));
         verify(traineeDao, never()).save(any());
     }
 
@@ -164,10 +170,10 @@ class TraineeServiceTest {
 
     @Test
     void update_changesNamesBirthDateAndAddress_butKeepsCredentials() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
         Trainee changes = new Trainee(null, User.of("Johnny", "Smyth"), LocalDate.of(1999, 5, 5), "Almaty");
 
-        service.update(CREDENTIALS, changes);
+        service.update(USER, changes);
 
         Trainee saved = savedTrainee();
         assertEquals(1L, saved.id());
@@ -181,10 +187,10 @@ class TraineeServiceTest {
 
     @Test
     void update_withBlankLastName_throwsAndSavesNothing() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
         Trainee changes = new Trainee(null, User.of("Johnny", ""), null, null);
 
-        assertThrows(IllegalArgumentException.class, () -> service.update(CREDENTIALS, changes));
+        assertThrows(IllegalArgumentException.class, () -> service.update(USER, changes));
         verify(traineeDao, never()).save(any());
     }
 
@@ -192,9 +198,9 @@ class TraineeServiceTest {
 
     @Test
     void toggleActive_deactivatesActiveTrainee() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
 
-        boolean result = service.toggleActive(CREDENTIALS);
+        boolean result = service.toggleActive(USER);
 
         assertFalse(result);
         assertFalse(savedTrainee().user().isActive());
@@ -202,9 +208,9 @@ class TraineeServiceTest {
 
     @Test
     void toggleActive_activatesInactiveTrainee() {
-        givenAuthenticatedTrainee(false);
+        givenStoredTrainee(false);
 
-        boolean result = service.toggleActive(CREDENTIALS);
+        boolean result = service.toggleActive(USER);
 
         assertTrue(result);
         assertTrue(savedTrainee().user().isActive());
@@ -214,18 +220,16 @@ class TraineeServiceTest {
 
     @Test
     void delete_removesTheAuthenticatedTrainee() {
-        Trainee trainee = givenAuthenticatedTrainee(true);
+        Trainee trainee = givenStoredTrainee(true);
 
-        service.delete(CREDENTIALS);
+        service.delete(USER);
 
         verify(traineeDao).delete(trainee);
     }
 
     @Test
-    void delete_withWrongPassword_deletesNothing() {
-        when(authenticationService.authenticateTrainee(CREDENTIALS)).thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class, () -> service.delete(CREDENTIALS));
+    void delete_forTrainerUser_isForbiddenAndDeletesNothing() {
+        assertThrows(ForbiddenOperationException.class, () -> service.delete(TRAINER_USER));
         verify(traineeDao, never()).delete(any());
     }
 
@@ -240,19 +244,24 @@ class TraineeServiceTest {
         List<Trainer> trainers = List.of(trainer(5L, "Anna", "Brown"));
         when(trainerDao.findNotAssignedTo("John.Smith")).thenReturn(trainers);
 
-        List<Trainer> result = service.getNotAssignedTrainers(CREDENTIALS);
+        List<Trainer> result = service.getNotAssignedTrainers(USER);
 
         assertSame(trainers, result);
-        verify(authenticationService).authenticateTrainee(CREDENTIALS);
+    }
+
+    @Test
+    void getNotAssignedTrainers_forTrainerUser_isForbidden() {
+        assertThrows(ForbiddenOperationException.class, () -> service.getNotAssignedTrainers(TRAINER_USER));
+        verifyNoInteractions(trainerDao);
     }
 
     @Test
     void updateTrainers_assignsFoundTrainers() {
-        Trainee trainee = givenAuthenticatedTrainee(true);
+        Trainee trainee = givenStoredTrainee(true);
         Trainer anna = trainer(5L, "Anna", "Brown");
         when(trainerDao.findByUsernames(java.util.Set.of("Anna.Brown"))).thenReturn(List.of(anna));
 
-        List<Trainer> result = service.updateTrainers(CREDENTIALS, List.of("Anna.Brown"));
+        List<Trainer> result = service.updateTrainers(USER, List.of("Anna.Brown"));
 
         assertEquals(List.of(anna), result);
         verify(traineeDao).updateTrainers(trainee, List.of(anna));
@@ -260,18 +269,18 @@ class TraineeServiceTest {
 
     @Test
     void updateTrainers_withUnknownTrainer_throwsAndChangesNothing() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
         when(trainerDao.findByUsernames(java.util.Set.of("nobody"))).thenReturn(List.of());
 
         assertThrows(NoSuchElementException.class,
-                () -> service.updateTrainers(CREDENTIALS, List.of("nobody")));
+                () -> service.updateTrainers(USER, List.of("nobody")));
         verify(traineeDao, never()).updateTrainers(any(), anyList());
     }
 
     @Test
     void updateTrainers_withNullList_throws() {
-        givenAuthenticatedTrainee(true);
+        givenStoredTrainee(true);
 
-        assertThrows(IllegalArgumentException.class, () -> service.updateTrainers(CREDENTIALS, null));
+        assertThrows(IllegalArgumentException.class, () -> service.updateTrainers(USER, null));
     }
 }

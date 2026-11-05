@@ -44,7 +44,7 @@ public class TrainingController {
     @PostMapping
     public void add(@Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
                     @Valid @RequestBody AddTrainingRequest request) {
-        trainingService.addTraining(new AddTrainingCommand(user.credentials().username(),
+        trainingService.addTraining(new AddTrainingCommand(user.username(),
                 request.traineeUsername(), request.trainerUsername(), request.trainingName(),
                 request.trainingDate(), request.trainingDuration()));
     }

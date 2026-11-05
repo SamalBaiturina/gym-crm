@@ -62,6 +62,8 @@ class TrainingControllerTest {
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
     private static final Credentials ANNA = new Credentials("Anna.Brown", "secret12345");
+    private static final AuthenticatedUser JOHN_USER = new AuthenticatedUser(JOHN, Role.TRAINEE, true);
+    private static final AuthenticatedUser ANNA_USER = new AuthenticatedUser(ANNA, Role.TRAINER, true);
     private static final Credentials MIKE = new Credentials("Mike.Jones", "secret12345");
 
     private static final String ADD_BODY = """
@@ -191,7 +193,7 @@ class TrainingControllerTest {
 
     @Test
     void traineeTrainingsAreListedWithoutFilters() throws Exception {
-        when(trainingService.getTraineeTrainings(JOHN, TraineeTrainingCriteria.any()))
+        when(trainingService.getTraineeTrainings(JOHN_USER, TraineeTrainingCriteria.any()))
                 .thenReturn(List.of(training()));
 
         mockMvc.perform(get("/trainees/John.Smith/trainings").header(HttpHeaders.AUTHORIZATION, basic(JOHN)))
@@ -214,7 +216,7 @@ class TrainingControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, basic(JOHN)))
                 .andExpect(status().isOk());
 
-        verify(trainingService).getTraineeTrainings(JOHN, new TraineeTrainingCriteria(
+        verify(trainingService).getTraineeTrainings(JOHN_USER, new TraineeTrainingCriteria(
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), "Anna", "YOGA"));
     }
 
@@ -253,7 +255,7 @@ class TrainingControllerTest {
 
     @Test
     void trainerTrainingsAreListedWithTheTraineeName() throws Exception {
-        when(trainingService.getTrainerTrainings(ANNA, TrainerTrainingCriteria.any()))
+        when(trainingService.getTrainerTrainings(ANNA_USER, TrainerTrainingCriteria.any()))
                 .thenReturn(List.of(training()));
 
         mockMvc.perform(get("/trainers/Anna.Brown/trainings").header(HttpHeaders.AUTHORIZATION, basic(ANNA)))
@@ -274,7 +276,7 @@ class TrainingControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, basic(ANNA)))
                 .andExpect(status().isOk());
 
-        verify(trainingService).getTrainerTrainings(ANNA, new TrainerTrainingCriteria(
+        verify(trainingService).getTrainerTrainings(ANNA_USER, new TrainerTrainingCriteria(
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), "John"));
     }
 }

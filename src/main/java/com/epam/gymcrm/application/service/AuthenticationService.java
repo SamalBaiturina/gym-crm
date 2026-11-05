@@ -63,7 +63,6 @@ public class AuthenticationService {
         return authenticate(trainerDao, "Trainer", credentials);
     }
 
-    /** Finds out who is calling: returns the role if the credentials are valid, otherwise throws. */
     /**
      * Finds out who is calling in one pass: looks the user up by username (the trainees first, then the
      * trainers), checks the password and returns the role and the active flag together with the credentials.

@@ -3,7 +3,9 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.exception.ValidationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -16,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +33,7 @@ import static org.mockito.Mockito.when;
 class TrainerProfileServiceTest {
 
     private static final Credentials CREDENTIALS = new Credentials("Anna.Brown", "secret");
+    private static final AuthenticatedUser USER = new AuthenticatedUser(CREDENTIALS, Role.TRAINER, true);
 
     @Mock
     private TrainerDao trainerDao;
@@ -39,8 +43,6 @@ class TrainerProfileServiceTest {
     private UsernameGenerator usernameGenerator;
     @Mock
     private PasswordGenerator passwordGenerator;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TrainerService service;
 
@@ -57,10 +59,10 @@ class TrainerProfileServiceTest {
     @Test
     void getProfileReturnsTheTrainerWithHisTrainees() {
         Trainer trainer = trainer();
-        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenReturn(trainer);
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer));
         when(traineeDao.findAssignedTo("Anna.Brown")).thenReturn(List.of(trainee()));
 
-        TrainerProfile profile = service.getProfile(CREDENTIALS);
+        TrainerProfile profile = service.getProfile(USER);
 
         assertSame(trainer, profile.trainer());
         assertEquals(List.of(trainee()), profile.trainees());
@@ -68,11 +70,11 @@ class TrainerProfileServiceTest {
 
     @Test
     void updateProfileChangesNamesAndActiveFlagAndKeepsTheSpecialization() {
-        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenReturn(trainer());
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
         when(trainerDao.save(any(Trainer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(traineeDao.findAssignedTo("Anna.Brown")).thenReturn(List.of(trainee()));
 
-        TrainerProfile profile = service.updateProfile(CREDENTIALS, "Annie", "Braun", false);
+        TrainerProfile profile = service.updateProfile(USER, "Annie", "Braun", false);
 
         User user = profile.trainer().user();
         assertEquals("Annie", user.firstName());
@@ -85,9 +87,9 @@ class TrainerProfileServiceTest {
 
     @Test
     void updateProfileRejectsBlankName() {
-        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenReturn(trainer());
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
 
-        assertThrows(ValidationException.class, () -> service.updateProfile(CREDENTIALS, "Annie", " ", true));
+        assertThrows(ValidationException.class, () -> service.updateProfile(USER, "Annie", " ", true));
         verify(trainerDao, never()).save(any());
     }
 }

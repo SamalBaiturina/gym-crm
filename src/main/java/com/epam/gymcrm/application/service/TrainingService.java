@@ -5,7 +5,8 @@ import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
-import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -28,7 +29,6 @@ public class TrainingService {
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
-    private AuthenticationService authenticationService;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -43,11 +43,6 @@ public class TrainingService {
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
-    }
-
-    @Autowired
-    public void setAuthenticationService(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
     }
 
     /**
@@ -85,20 +80,20 @@ public class TrainingService {
 
     /** Trainings of the trainee, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
-        authenticationService.authenticateTrainee(credentials);
-        Validation.validated("get trainings of trainee username=" + credentials.username(),
+    public List<Training> getTraineeTrainings(AuthenticatedUser user, TraineeTrainingCriteria criteria) {
+        user.requireRole(Role.TRAINEE);
+        Validation.validated("get trainings of trainee username=" + user.username(),
                 () -> Validation.requireNotNull(criteria, "criteria"));
-        return trainingDao.findForTrainee(credentials.username(), criteria);
+        return trainingDao.findForTrainee(user.username(), criteria);
     }
 
     /** Trainings of the trainer, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
-        authenticationService.authenticateTrainer(credentials);
-        Validation.validated("get trainings of trainer username=" + credentials.username(),
+    public List<Training> getTrainerTrainings(AuthenticatedUser user, TrainerTrainingCriteria criteria) {
+        user.requireRole(Role.TRAINER);
+        Validation.validated("get trainings of trainer username=" + user.username(),
                 () -> Validation.requireNotNull(criteria, "criteria"));
-        return trainingDao.findForTrainer(credentials.username(), criteria);
+        return trainingDao.findForTrainer(user.username(), criteria);
     }
 
     private void requireTraineeOrTrainer(AddTrainingCommand command) {

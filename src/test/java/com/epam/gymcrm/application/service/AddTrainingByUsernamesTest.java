@@ -40,8 +40,6 @@ class AddTrainingByUsernamesTest {
     private TraineeDao traineeDao;
     @Mock
     private TrainerDao trainerDao;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TrainingService service;
 

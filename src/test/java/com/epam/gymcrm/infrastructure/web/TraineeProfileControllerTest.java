@@ -63,6 +63,7 @@ class TraineeProfileControllerTest {
     }
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
+    private static final AuthenticatedUser JOHN_USER = new AuthenticatedUser(JOHN, Role.TRAINEE, true);
     private static final String JOHN_HEADER = "Basic " + Base64.getEncoder()
             .encodeToString("John.Smith:secret12345".getBytes(StandardCharsets.UTF_8));
 
@@ -94,7 +95,7 @@ class TraineeProfileControllerTest {
 
     @Test
     void getReturnsTheProfileWithTrainers() throws Exception {
-        when(traineeService.getProfile(JOHN)).thenReturn(new TraineeProfile(trainee("John", true), List.of(anna())));
+        when(traineeService.getProfile(JOHN_USER)).thenReturn(new TraineeProfile(trainee("John", true), List.of(anna())));
 
         mockMvc.perform(get("/trainees/John.Smith").header(HttpHeaders.AUTHORIZATION, JOHN_HEADER))
                 .andExpect(status().isOk())
@@ -132,7 +133,7 @@ class TraineeProfileControllerTest {
 
     @Test
     void updateSendsTheChangesAndReturnsTheProfile() throws Exception {
-        when(traineeService.updateProfile(eq(JOHN), any(UpdateTrainee.class)))
+        when(traineeService.updateProfile(eq(JOHN_USER), any(UpdateTrainee.class)))
                 .thenReturn(new TraineeProfile(trainee("Johnny", false), List.of()));
 
         mockMvc.perform(put("/trainees/John.Smith")
@@ -148,7 +149,7 @@ class TraineeProfileControllerTest {
                 .andExpect(jsonPath("$.trainers.length()").value(0));
 
         ArgumentCaptor<UpdateTrainee> captor = ArgumentCaptor.forClass(UpdateTrainee.class);
-        verify(traineeService).updateProfile(eq(JOHN), captor.capture());
+        verify(traineeService).updateProfile(eq(JOHN_USER), captor.capture());
         UpdateTrainee sent = captor.getValue();
         assertEquals("Johnny", sent.firstName());
         assertEquals("Smythe", sent.lastName());
@@ -179,6 +180,6 @@ class TraineeProfileControllerTest {
         mockMvc.perform(delete("/trainees/John.Smith").header(HttpHeaders.AUTHORIZATION, JOHN_HEADER))
                 .andExpect(status().isOk());
 
-        verify(traineeService).delete(JOHN);
+        verify(traineeService).delete(JOHN_USER);
     }
 }
