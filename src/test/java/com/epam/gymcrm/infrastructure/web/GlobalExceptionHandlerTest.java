@@ -1,10 +1,10 @@
 package com.epam.gymcrm.infrastructure.web;
 
 import com.epam.gymcrm.application.service.AuthenticationException;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.infrastructure.web.error.GlobalExceptionHandler;
-import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,7 +92,7 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/forbidden")
         public void forbidden() {
-            throw new AccessDeniedException("Access to another user's data is not allowed");
+            throw new ForbiddenOperationException("Access to another user's data is not allowed");
         }
     }
 

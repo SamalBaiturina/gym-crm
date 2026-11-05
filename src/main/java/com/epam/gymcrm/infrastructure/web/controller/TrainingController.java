@@ -3,7 +3,6 @@ package com.epam.gymcrm.infrastructure.web.controller;
 import com.epam.gymcrm.application.service.AddTrainingCommand;
 import com.epam.gymcrm.application.service.TrainingService;
 import com.epam.gymcrm.infrastructure.web.dto.AddTrainingRequest;
-import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,12 +44,8 @@ public class TrainingController {
     @PostMapping
     public void add(@Parameter(hidden = true) @RequestAttribute(AUTHENTICATED_USER) AuthenticatedUser user,
                     @Valid @RequestBody AddTrainingRequest request) {
-        String caller = user.credentials().username();
-        if (!caller.equals(request.traineeUsername()) && !caller.equals(request.trainerUsername())) {
-            throw new AccessDeniedException("A training can be added only by its trainee or its trainer");
-        }
-        trainingService.addTraining(new AddTrainingCommand(request.traineeUsername(),
-                request.trainerUsername(), request.trainingName(), request.trainingDate(),
-                request.trainingDuration()));
+        trainingService.addTraining(new AddTrainingCommand(user.credentials().username(),
+                request.traineeUsername(), request.trainerUsername(), request.trainingName(),
+                request.trainingDate(), request.trainingDuration()));
     }
 }

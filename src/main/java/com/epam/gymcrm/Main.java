@@ -1,6 +1,5 @@
 package com.epam.gymcrm;
 
-import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.PasswordChange;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
@@ -47,9 +46,8 @@ public class Main {
             log.info("Not assigned trainers after assigning: {}",
                     facade.getNotAssignedTrainers(traineeCredentials).size());
 
-            facade.addTraining(trainerCredentials,
-                    new NewTraining(traineeCredentials.username(), "Morning yoga", new TrainingType("YOGA"),
-                            LocalDate.now(), 60));
+            facade.addTraining(trainerCredentials, traineeCredentials.username(), "Morning yoga",
+                    LocalDate.now(), 60);
             log.info("Trainee trainings: {}",
                     facade.getTraineeTrainings(traineeCredentials,
                             new TraineeTrainingCriteria(null, null, null, "YOGA")));

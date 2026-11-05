@@ -3,6 +3,7 @@ package com.epam.gymcrm.infrastructure.web;
 import com.epam.gymcrm.application.service.AddTrainingCommand;
 import com.epam.gymcrm.application.service.AuthenticationService;
 import com.epam.gymcrm.application.service.TrainingService;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
@@ -66,8 +67,12 @@ class TrainingControllerTest {
             {"traineeUsername":"John.Smith","trainerUsername":"Anna.Brown","trainingName":"Morning yoga",
              "trainingDate":"2026-01-10","trainingDuration":60}
             """;
-    private static final AddTrainingCommand ADD_COMMAND = new AddTrainingCommand(
-            "John.Smith", "Anna.Brown", "Morning yoga", LocalDate.of(2026, 1, 10), 60);
+
+    private static AddTrainingCommand commandBy(String caller) {
+        return new AddTrainingCommand(caller, "John.Smith", "Anna.Brown", "Morning yoga",
+                LocalDate.of(2026, 1, 10), 60);
+    }
+
 
     @Autowired
     private WebApplicationContext webContext;
@@ -110,7 +115,7 @@ class TrainingControllerTest {
                         .content(ADD_BODY))
                 .andExpect(status().isOk());
 
-        verify(trainingService).addTraining(ADD_COMMAND);
+        verify(trainingService).addTraining(commandBy("John.Smith"));
     }
 
     @Test
@@ -121,19 +126,20 @@ class TrainingControllerTest {
                         .content(ADD_BODY))
                 .andExpect(status().isOk());
 
-        verify(trainingService).addTraining(ADD_COMMAND);
+        verify(trainingService).addTraining(commandBy("Anna.Brown"));
     }
 
     @Test
-    void anotherUserCannotAddATraining() throws Exception {
+    void theServiceRefusesAnotherUserWith403() throws Exception {
+        when(trainingService.addTraining(commandBy("Mike.Jones")))
+                .thenThrow(new ForbiddenOperationException("A training can be added only by its trainee or its trainer"));
+
         mockMvc.perform(post("/trainings")
                         .header(HttpHeaders.AUTHORIZATION, basic(MIKE))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(ADD_BODY))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.type").value("FORBIDDEN"));
-
-        verifyNoInteractions(trainingService);
     }
 
     @Test
@@ -148,7 +154,7 @@ class TrainingControllerTest {
 
     @Test
     void unknownTrainerIs404() throws Exception {
-        when(trainingService.addTraining(ADD_COMMAND))
+        when(trainingService.addTraining(commandBy("John.Smith")))
                 .thenThrow(new NotFoundException("Trainer not found: Anna.Brown"));
 
         mockMvc.perform(post("/trainings")

@@ -1,9 +1,9 @@
 package com.epam.gymcrm.infrastructure.web.error;
 
 import com.epam.gymcrm.application.service.AuthenticationException;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
-import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -52,9 +52,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiError("UNAUTHORIZED", List.of(e.getMessage())));
     }
 
-    /** 403: the caller tries to reach another user's data. */
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e) {
+    /** 403: the caller is not allowed to perform the operation, for example to reach another user's data. */
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ApiError> handleForbidden(ForbiddenOperationException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ApiError("FORBIDDEN", List.of(e.getMessage())));
     }

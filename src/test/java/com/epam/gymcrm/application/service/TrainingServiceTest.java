@@ -1,6 +1,5 @@
 package com.epam.gymcrm.application.service;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
@@ -12,21 +11,15 @@ import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -40,8 +33,6 @@ class TrainingServiceTest {
 
     @Mock
     private TrainingDao trainingDao;
-    @Mock
-    private TraineeDao traineeDao;
     @Mock
     private AuthenticationService authenticationService;
     @InjectMocks
@@ -57,94 +48,6 @@ class TrainingServiceTest {
 
     private Training training() {
         return new Training(1L, trainee(), trainer(), "Yoga", new TrainingType("YOGA"), DATE, 60);
-    }
-
-    private NewTraining request(String name, int duration) {
-        return new NewTraining("John.Smith", name, new TrainingType("YOGA"), DATE, duration);
-    }
-
-    // ---------- add training ----------
-
-    @Test
-    void addTraining_savesTrainingWithTheTraineeAndTheTrainer() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS)).thenReturn(trainer());
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
-        when(trainingDao.save(any(Training.class))).thenAnswer(invocation -> {
-            Training toSave = invocation.getArgument(0);
-            return toSave.withId(10L);
-        });
-
-        Training result = service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60));
-
-        assertEquals(10L, result.id());
-        ArgumentCaptor<Training> captor = ArgumentCaptor.forClass(Training.class);
-        verify(trainingDao).save(captor.capture());
-        Training saved = captor.getValue();
-        assertEquals(trainee(), saved.trainee());
-        assertEquals(trainer(), saved.trainer());
-        assertEquals("Yoga", saved.trainingName());
-        assertEquals("YOGA", saved.trainingType().name());
-        assertEquals(DATE, saved.trainingDate());
-        assertEquals(60, saved.trainingDuration());
-    }
-
-    @Test
-    void addTraining_withWrongPassword_throwsAndSavesNothing() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withUnknownTrainee_throwsAndSavesNothing() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.empty());
-
-        assertThrows(NoSuchElementException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60)));
-        verify(trainingDao, never()).save(any());
-    }
-
-    @Test
-    void addTraining_withBlankName_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request(" ", 60)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withNonPositiveDuration_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 0)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withMissingDate_throws() {
-        NewTraining noDate = new NewTraining("John.Smith", "Yoga", new TrainingType("YOGA"), null, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noDate));
-    }
-
-    @Test
-    void addTraining_withMissingType_throws() {
-        NewTraining noType = new NewTraining("John.Smith", "Yoga", null, DATE, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noType));
-    }
-
-    @Test
-    void addTraining_withMissingTraineeUsername_throws() {
-        NewTraining noTrainee = new NewTraining(" ", "Yoga", new TrainingType("YOGA"), DATE, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noTrainee));
-    }
-
-    @Test
-    void addTraining_withNullRequest_throws() {
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, null));
     }
 
     // ---------- lists ----------

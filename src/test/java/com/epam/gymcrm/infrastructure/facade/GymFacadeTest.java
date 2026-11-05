@@ -1,7 +1,7 @@
 package com.epam.gymcrm.infrastructure.facade;
 
+import com.epam.gymcrm.application.service.AddTrainingCommand;
 import com.epam.gymcrm.application.service.AuthenticationService;
-import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
@@ -168,10 +168,11 @@ class GymFacadeTest {
 
     @Test
     void addTraining_delegates() {
-        NewTraining request = new NewTraining("John.Smith", "Yoga", new TrainingType("YOGA"), FROM, 60);
-        when(trainingService.addTraining(CREDENTIALS, request)).thenReturn(training);
+        AddTrainingCommand command = new AddTrainingCommand("u", "John.Smith", "u", "Yoga", FROM, 60);
+        when(trainingService.addTraining(command)).thenReturn(training);
 
-        assertSame(training, facade.addTraining(CREDENTIALS, request));
+        assertSame(training, facade.addTraining(CREDENTIALS, "John.Smith", "Yoga", FROM, 60));
+        verify(authenticationService).authenticateTrainer(CREDENTIALS);
     }
 
     @Test

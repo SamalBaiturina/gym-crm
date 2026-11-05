@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.domain.model.Trainee;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +55,11 @@ class AddTrainingByUsernamesTest {
     }
 
     private AddTrainingCommand command(String name, int duration) {
-        return new AddTrainingCommand("John.Smith", "Anna.Brown", name, DATE, duration);
+        return new AddTrainingCommand("John.Smith", "John.Smith", "Anna.Brown", name, DATE, duration);
+    }
+
+    private AddTrainingCommand commandBy(String caller) {
+        return new AddTrainingCommand(caller, "John.Smith", "Anna.Brown", "Morning yoga", DATE, 60);
     }
 
     @Test
@@ -77,6 +83,29 @@ class AddTrainingByUsernamesTest {
         assertEquals("Morning yoga", sent.trainingName());
         assertEquals(DATE, sent.trainingDate());
         assertEquals(60, sent.trainingDuration());
+    }
+
+    @Test
+    void trainerCanAddTheTraining() {
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.of(trainer()));
+        when(trainingDao.save(any(Training.class))).thenAnswer(invocation -> {
+            Training training = invocation.getArgument(0);
+            return training.withId(11L);
+        });
+
+        Training saved = service.addTraining(commandBy("Anna.Brown"));
+
+        assertEquals(11L, saved.id());
+    }
+
+    @Test
+    void anotherUserIsForbiddenAndNothingIsLoaded() {
+        ForbiddenOperationException e = assertThrows(ForbiddenOperationException.class,
+                () -> service.addTraining(commandBy("Mike.Jones")));
+
+        assertEquals("A training can be added only by its trainee or its trainer", e.getMessage());
+        verifyNoInteractions(traineeDao, trainerDao, trainingDao);
     }
 
     @Test
@@ -108,11 +137,13 @@ class AddTrainingByUsernamesTest {
         assertThrows(ValidationException.class, () -> service.addTraining(command(" ", 60)));
         assertThrows(ValidationException.class, () -> service.addTraining(command("Morning yoga", 0)));
         assertThrows(ValidationException.class,
-                () -> service.addTraining(new AddTrainingCommand("John.Smith", "Anna.Brown", "Yoga", null, 60)));
+                () -> service.addTraining(new AddTrainingCommand("John.Smith", "John.Smith", "Anna.Brown", "Yoga", null, 60)));
         assertThrows(ValidationException.class,
-                () -> service.addTraining(new AddTrainingCommand(" ", "Anna.Brown", "Yoga", DATE, 60)));
+                () -> service.addTraining(new AddTrainingCommand("John.Smith", " ", "Anna.Brown", "Yoga", DATE, 60)));
         assertThrows(ValidationException.class,
-                () -> service.addTraining(new AddTrainingCommand("John.Smith", null, "Yoga", DATE, 60)));
+                () -> service.addTraining(new AddTrainingCommand("John.Smith", "John.Smith", null, "Yoga", DATE, 60)));
+        assertThrows(ValidationException.class,
+                () -> service.addTraining(new AddTrainingCommand(" ", "John.Smith", "Anna.Brown", "Yoga", DATE, 60)));
 
         verify(trainingDao, never()).save(any());
     }

@@ -1,6 +1,7 @@
 package com.epam.gymcrm.infrastructure.web.security;
 
 import com.epam.gymcrm.application.service.AuthenticationService;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +47,7 @@ public class BasicAuthInterceptor implements HandlerInterceptor {
     /** A deactivated user may only reactivate himself. Checked after authentication, so 401 comes first. */
     private void requireActive(HandlerMethod method, Credentials credentials) {
         if (!method.hasMethodAnnotation(AllowInactive.class) && authenticationService.isDeactivated(credentials)) {
-            throw new AccessDeniedException("The account is deactivated, activate it first");
+            throw new ForbiddenOperationException("The account is deactivated, activate it first");
         }
     }
 
@@ -59,7 +60,7 @@ public class BasicAuthInterceptor implements HandlerInterceptor {
             return;
         }
         if (!pathVariables.get("username").equals(credentials.username())) {
-            throw new AccessDeniedException("Access to another user's data is not allowed");
+            throw new ForbiddenOperationException("Access to another user's data is not allowed");
         }
     }
 }

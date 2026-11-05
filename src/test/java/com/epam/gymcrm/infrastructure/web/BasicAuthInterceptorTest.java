@@ -2,9 +2,9 @@ package com.epam.gymcrm.infrastructure.web;
 
 import com.epam.gymcrm.application.service.AuthenticationException;
 import com.epam.gymcrm.application.service.AuthenticationService;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
-import com.epam.gymcrm.infrastructure.web.security.AccessDeniedException;
 import com.epam.gymcrm.infrastructure.web.security.AllowInactive;
 import com.epam.gymcrm.infrastructure.web.security.AuthenticatedUser;
 import com.epam.gymcrm.infrastructure.web.security.BasicAuthInterceptor;
@@ -112,7 +112,7 @@ class BasicAuthInterceptorTest {
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("username", "Anna.Brown"));
         HandlerMethod handler = handler("secured");
 
-        assertThrows(AccessDeniedException.class, () -> interceptor.preHandle(request, response, handler));
+        assertThrows(ForbiddenOperationException.class, () -> interceptor.preHandle(request, response, handler));
     }
 
     @Test
@@ -132,7 +132,7 @@ class BasicAuthInterceptorTest {
         MockHttpServletRequest request = requestFrom("John.Smith", "secret12345");
         HandlerMethod handler = handler("secured");
 
-        assertThrows(AccessDeniedException.class, () -> interceptor.preHandle(request, response, handler));
+        assertThrows(ForbiddenOperationException.class, () -> interceptor.preHandle(request, response, handler));
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.epam.gymcrm.infrastructure.facade;
 
+import com.epam.gymcrm.application.service.AddTrainingCommand;
 import com.epam.gymcrm.application.service.AuthenticationService;
-import com.epam.gymcrm.application.service.NewTraining;
 import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.application.service.TrainerService;
 import com.epam.gymcrm.application.service.TrainingService;
@@ -14,6 +14,7 @@ import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -95,8 +96,13 @@ public class GymFacade {
         return trainingService.getTrainerTrainings(credentials, criteria);
     }
 
-    public Training addTraining(Credentials trainerCredentials, NewTraining training) {
-        return trainingService.addTraining(trainerCredentials, training);
+    /** The trainer, authenticated by his credentials, adds a training with the given trainee. */
+    public Training addTraining(Credentials trainerCredentials, String traineeUsername, String name,
+                                LocalDate date, int duration) {
+        authenticationService.authenticateTrainer(trainerCredentials);
+        String trainerUsername = trainerCredentials.username();
+        return trainingService.addTraining(
+                new AddTrainingCommand(trainerUsername, traineeUsername, trainerUsername, name, date, duration));
     }
 
     public List<Trainer> getNotAssignedTrainers(Credentials traineeCredentials) {
