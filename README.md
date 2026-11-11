@@ -1,29 +1,27 @@
 # Gym CRM System
 
-Gym CRM built with Spring MVC and Hibernate (JPA) on PostgreSQL.
-Manages trainees, trainers and trainings. The application is available as a REST API (embedded Tomcat) and as a console demo.
+Gym CRM built with Spring Boot and Hibernate (JPA) on PostgreSQL.
+Manages trainees, trainers and trainings through a REST API.
 
 ## Tech stack
 
 - Java 21, Maven
-- Spring Framework 6.1 (Core, ORM, transactions, MVC), no Spring Boot yet
-- Embedded Tomcat 10.1, Jackson (JSON), Hibernate Validator (request validation)
-- Hibernate 6.5 with PostgreSQL, HikariCP connection pool
+- Spring Boot 3.5 (Spring Framework 6.2): web (MVC, embedded Tomcat), data JPA, validation, Actuator
+- Jackson (JSON), Hibernate Validator (request validation)
+- Hibernate with PostgreSQL, HikariCP connection pool
 - SLF4J + Logback, JUnit 5, Mockito, Spring MockMvc, H2 (tests only), JaCoCo
-- Swagger (OpenAPI) annotations on the controllers; the Swagger UI will come with the Spring Boot migration
+- Swagger (OpenAPI) annotations on the controllers
 
 ## Architecture
 
 Hexagonal (onion) layout, dependencies point towards the domain model:
 
 - `domain.model` - records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`), value objects (`Credentials`, `PasswordChange`, training search criteria), read models (`TraineeProfile`, `TrainerProfile`) and the `UserProfile` interface shared by trainee and trainer
-- `domain.exception` - `ValidationException` (400), `NotFoundException` (404)
+- `domain.exception` - `ValidationException` (400), `NotFoundException` (404), `ForbiddenOperationException` (403)
 - `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs)
-- `application.service` - business logic, authentication, validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
+- `application.service` - business logic, authentication (`AuthenticationException`, 401), validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
 - `infrastructure.persistence` - Hibernate DAOs (`AbstractProfileDao` is their common base), JPA entities (`entity` package) and one mapper per entity (`mapper` package)
-- `infrastructure.config` - Spring configuration of the services and persistence (data source, Hibernate, transactions)
-- `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters)
-- `infrastructure.facade` - `GymFacade`, a single entry point for the 18 operations of the console demo
+- `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters, registered as Spring beans)
 
 JPA entities are separate classes in the infrastructure layer, so the domain model stays free of persistence annotations.
 Ports that change data (`delete`, `updateTrainers`, saving a `Training`) take domain objects instead of ids, so a row loaded by a service is not loaded again by the DAO.
@@ -41,23 +39,19 @@ then execute `src/main/resources/db/schema.sql` against `gymcrm`.
 The script creates the tables and fills the constant `training_type` table
 (`1 FITNESS`, `2 YOGA`, `3 ZUMBA`, `4 STRETCHING`, `5 RESISTANCE`).
 
-Connection settings are in `src/main/resources/application.properties`.
+Connection settings are in `src/main/resources/application.yml`.
 The password is read from the `DB_PASSWORD` environment variable (default `postgres`) and is never committed.
-Hibernate runs with `hbm2ddl.auto=validate`: it checks the schema but does not change it.
+Hibernate runs with `ddl-auto: validate`: it checks the schema but does not change it.
 
 ## Run
 
-REST API:
-
 ```
 export DB_PASSWORD=your_password
-mvn clean compile
+mvn spring-boot:run
 ```
 
-then run `com.epam.gymcrm.RestApplication` from the IDE. It listens on port 8080 (use `-Dserver.port=9090` to change it).
-Restart it after every code change.
-
-Console demo: run `com.epam.gymcrm.Main`. It goes through the main operations once using `GymFacade`.
+The API listens on port 8080 (use `--server.port=9090` to change it).
+An executable jar is built with `mvn clean package` and started with `java -jar target/gym-crm-1.0-SNAPSHOT.jar`.
 
 ## REST API
 
@@ -157,7 +151,6 @@ Other errors of Spring MVC (wrong method `405`, wrong content type `415`) use th
 ### API documentation
 
 The controllers are annotated with Swagger (OpenAPI) annotations: a tag per controller and a summary, description and possible responses per endpoint.
-The Swagger UI is not enabled yet; it will be added with the Spring Boot migration.
 
 ## Logging
 
@@ -175,34 +168,12 @@ The Swagger UI is not enabled yet; it will be added with the Spring Boot migrati
 mvn clean test
 ```
 
-- Service and facade tests use Mockito mocks.
-- Controller tests use Spring MockMvc with the real controllers, interceptor and exception handler and mocked services.
-- DAO tests are integration tests on in-memory H2 with the same Hibernate configuration.
+- Service tests use Mockito mocks.
+- Controller tests use `@WebMvcTest`: the real controllers, interceptor, filters and exception handler with mocked services.
+- DAO tests use `@DataJpaTest` on in-memory H2.
 - `QueryCountTest` uses Hibernate statistics to check that the training lists run one query each (no N+1)
   and that saving a training or changing trainers does not load the trainee and trainers again.
 - `ServiceLoggingTest` checks that failures are logged as warnings with the username; the logging filters have their own tests.
 - `ApiDocumentationTest` checks that every controller and endpoint has its OpenAPI description.
+- `mvn clean verify` runs the tests and fails if line coverage drops below 80%.
 - JaCoCo report: `target/site/jacoco/index.html`.
-
-## Console demo operations
-
-`GymFacade` keeps the 18 service operations in one place; `Main` runs them as a demo. The REST API covers the same functions.
-
-1. Create trainer profile
-2. Create trainee profile
-3. Trainee username/password matching
-4. Trainer username/password matching
-5. Select trainer profile by username
-6. Select trainee profile by username
-7. Trainee password change
-8. Trainer password change
-9. Update trainer profile
-10. Update trainee profile
-11. Activate/de-activate trainee
-12. Activate/de-activate trainer
-13. Delete trainee profile by username (trainings are deleted by cascade)
-14. Get trainee trainings list by criteria (from date, to date, trainer name, training type)
-15. Get trainer trainings list by criteria (from date, to date, trainee name)
-16. Add training
-17. Get trainers not assigned to a trainee
-18. Update trainee's trainers list

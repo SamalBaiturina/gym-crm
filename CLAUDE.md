@@ -1,6 +1,6 @@
 # Gym CRM System
 
-Backend for a gym: trainees, trainers and their trainings. Java 21, Maven, Spring, Hibernate (JPA), PostgreSQL.
+Backend for a gym: trainees, trainers and their trainings. Java 21, Maven, Spring Boot, Hibernate (JPA), PostgreSQL.
 This file is the technical context for AI assistants. Setup instructions and the API reference are in `README.md`.
 
 ## Build and test
@@ -9,12 +9,21 @@ This file is the technical context for AI assistants. Setup instructions and the
 | --- | --- |
 | Run all tests | `mvn clean test` |
 | Build | `mvn clean package` |
+| Run the application | `mvn spring-boot:run` |
+| Tests and the 80% coverage check | `mvn clean verify` |
 
 - Database: PostgreSQL, database `gymcrm`. `src/main/resources/db/schema.sql` creates the tables
   and inserts the training types.
 - The database password comes from the `DB_PASSWORD` environment variable. Never put it into a file.
-- Hibernate runs with `hbm2ddl.auto=validate`: it checks the schema and never changes it.
-- Tests use in-memory H2. The JaCoCo report is written to `target/site/jacoco` during `mvn test`.
+- Hibernate runs with `spring.jpa.hibernate.ddl-auto=validate`: it checks the schema and never changes it.
+- Tests use in-memory H2. The JaCoCo report is written to `target/site/jacoco` during `mvn test`;
+  the 80% line coverage check runs in `mvn verify`.
+
+## Configuration
+
+- The application starts from `GymCrmApplication` (`@SpringBootApplication`). Spring Boot auto-configures the web server,
+  the data source (HikariCP), JPA and transactions, so there is no hand-written Spring configuration for them.
+- Settings are in `src/main/resources/application.yml`.
 
 ## Architecture
 
@@ -28,7 +37,6 @@ Hexagonal (ports and adapters). Dependencies point inward only: `infrastructure`
 | `application.service` | Services, use-case commands (`RegisterTrainee`, `RegisterTrainer`, `UpdateTrainee`, `AddTrainingCommand`), read models (`TraineeProfile`, `TrainerProfile`), `AuthenticationException` |
 | `infrastructure.web` | Controllers, DTOs, error handling, security, request logging filters |
 | `infrastructure.persistence` | DAO implementations, JPA entities, mappers |
-| `infrastructure.config` | Spring configuration |
 
 Rules:
 
@@ -41,6 +49,7 @@ Rules:
 
 1. `TransactionIdFilter` puts a `transactionId` into the logging context (MDC) and returns it in a response header.
 2. `RestCallLoggingFilter` logs the request and the response (level by status, passwords masked).
+   Both filters are `@Component` beans; `@Order` keeps this sequence.
 3. `BasicAuthInterceptor` authenticates the caller once through `AuthenticationService.authenticateAndLoad`,
    then checks the active flag and the `{username}` path variable, and stores an `AuthenticatedUser`
    (credentials, role, active flag) in the request.
@@ -86,11 +95,12 @@ Spring's own errors (405, 415 and so on) go through the same handler.
 
 ## Testing
 
-- JUnit 5, Mockito, Spring MockMvc. DAO tests run on in-memory H2.
-- Services are tested with plain Mockito. Controllers are tested with MockMvc and mocked services.
+- JUnit 5, Mockito, Spring MockMvc. DAO tests run on in-memory H2 with `@DataJpaTest` (base class `JpaTestBase`).
+- Services are tested with plain Mockito. Controllers are tested with `@WebMvcTest` (base class `ControllerTestBase`)
+  and mocked services.
 - Test names state the behavior, for example `getReturnsTheProfileWithTrainers`.
 - Every new behavior needs unit tests, including the rejected paths (401, 403, 404, validation).
-- Line coverage must stay at 80% or higher (JaCoCo).
+- Line coverage must stay at 80% or higher (JaCoCo, checked by `mvn clean verify`).
 
 ## Conventions
 
