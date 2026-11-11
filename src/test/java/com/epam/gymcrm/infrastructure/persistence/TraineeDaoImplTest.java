@@ -1,8 +1,5 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
-import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.Training;
@@ -18,16 +15,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TraineeDaoImplTest extends JpaTestBase {
-
-    private final TraineeDao traineeDao = bean(TraineeDao.class);
-    private final TrainerDao trainerDao = bean(TrainerDao.class);
-    private final TrainingDao trainingDao = bean(TrainingDao.class);
 
     @Test
     void save_assignsIdAndCanBeFoundByUsername() {

@@ -1,8 +1,5 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
-import com.epam.gymcrm.application.port.out.TrainingDao;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -18,6 +15,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,9 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class QueryCountTest extends JpaTestBase {
 
-    private final TraineeDao traineeDao = bean(TraineeDao.class);
-    private final TrainerDao trainerDao = bean(TrainerDao.class);
-    private final TrainingDao trainingDao = bean(TrainingDao.class);
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     private Statistics statistics;
     private Trainee john;
@@ -42,7 +39,7 @@ class QueryCountTest extends JpaTestBase {
     /** John has three trainings with two different trainers; Mike has one with Anna. */
     @BeforeEach
     void seed() {
-        statistics = bean(EntityManagerFactory.class).unwrap(SessionFactory.class).getStatistics();
+        statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         statistics.setStatisticsEnabled(true);
 
         tx.executeWithoutResult(status -> {

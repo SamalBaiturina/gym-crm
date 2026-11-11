@@ -1,19 +1,14 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TrainingTypeDao;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.support.JpaTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TrainingTypeDaoImplTest extends JpaTestBase {
-
-    private final TrainingTypeDao trainingTypeDao = bean(TrainingTypeDao.class);
 
     @Test
     void findAllReturnsTheTypesWithIds() {

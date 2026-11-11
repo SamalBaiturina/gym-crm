@@ -1,10 +1,7 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
-import com.epam.gymcrm.application.port.out.TrainingDao;
-import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
+import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainerTrainingCriteria;
 import com.epam.gymcrm.domain.model.Training;
@@ -18,16 +15,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TrainingDaoImplTest extends JpaTestBase {
-
-    private final TraineeDao traineeDao = bean(TraineeDao.class);
-    private final TrainerDao trainerDao = bean(TrainerDao.class);
-    private final TrainingDao trainingDao = bean(TrainingDao.class);
 
     /**
      * John trains with Anna (yoga) twice and with Bob (fitness) once; Mike trains with Anna once.
