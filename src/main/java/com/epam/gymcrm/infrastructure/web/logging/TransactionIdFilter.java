@@ -5,6 +5,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -17,6 +20,9 @@ import java.util.regex.Pattern;
  * "transactionId"), so every log line of the request carries it, and it is returned in the
  * response header. The same header can be passed on to other services.
  */
+
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class TransactionIdFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-Transaction-Id";

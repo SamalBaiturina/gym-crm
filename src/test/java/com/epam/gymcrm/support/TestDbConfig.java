@@ -1,6 +1,5 @@
 package com.epam.gymcrm.support;
 
-import com.epam.gymcrm.infrastructure.config.PersistenceConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;

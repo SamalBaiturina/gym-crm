@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: gym-crm
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gymcrm
+    username: postgres
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    # services map entities to domain objects inside a transaction, no lazy loading in controllers
+    open-in-view: false

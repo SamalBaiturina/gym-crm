@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -23,6 +26,9 @@ import java.util.regex.Pattern;
  * The request body is logged only if the application has read it: a request rejected earlier
  * (for example with 401) is logged without a body.
  */
+
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class RestCallLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RestCallLoggingFilter.class);
