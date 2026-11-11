@@ -1,5 +1,6 @@
 package com.epam.gymcrm.application.service;
 
+import com.epam.gymcrm.domain.exception.ValidationException;
 import com.epam.gymcrm.domain.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,7 @@ final class Validation {
     static void validated(String context, Runnable checks) {
         try {
             checks.run();
-        } catch (IllegalArgumentException e) {
+        } catch (ValidationException e) {
             log.warn("Validation failed ({}): {}", context, e.getMessage());
             throw e;
         }
@@ -26,20 +27,20 @@ final class Validation {
 
     static void requireText(String value, String field) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(field + " is required");
+            throw new ValidationException(field + " is required");
         }
     }
 
     static <T> T requireNotNull(T value, String field) {
         if (value == null) {
-            throw new IllegalArgumentException(field + " is required");
+            throw new ValidationException(field + " is required");
         }
         return value;
     }
 
     static void requirePositive(int value, String field) {
         if (value <= 0) {
-            throw new IllegalArgumentException(field + " must be positive");
+            throw new ValidationException(field + " must be positive");
         }
     }
 

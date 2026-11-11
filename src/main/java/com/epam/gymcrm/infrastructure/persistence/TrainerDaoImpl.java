@@ -49,10 +49,23 @@ public class TrainerDaoImpl extends AbstractProfileDao<TrainerEntity, Trainer> i
                 .toList();
     }
 
+    /** Active trainers that are not assigned to the trainee yet. */
     @Override
     public List<Trainer> findNotAssignedTo(String traineeUsername) {
         return entityManager.createQuery(SELECT_TRAINER
-                                + "where t.id not in (select a.id from TraineeEntity te "
+                                + "where u.active = true and t.id not in (select a.id from TraineeEntity te "
+                                + "join te.trainers a join te.user tu where tu.username = :username)",
+                        TrainerEntity.class)
+                .setParameter("username", traineeUsername)
+                .getResultList().stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Trainer> findAssignedTo(String traineeUsername) {
+        return entityManager.createQuery(SELECT_TRAINER
+                                + "where t.id in (select a.id from TraineeEntity te "
                                 + "join te.trainers a join te.user tu where tu.username = :username)",
                         TrainerEntity.class)
                 .setParameter("username", traineeUsername)

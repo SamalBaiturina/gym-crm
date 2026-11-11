@@ -1,8 +1,12 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.exception.NotFoundException;
+import com.epam.gymcrm.domain.exception.ValidationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
-import com.epam.gymcrm.domain.model.PasswordChange;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
@@ -12,6 +16,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,6 +33,8 @@ import static org.mockito.Mockito.when;
 class TrainerServiceTest {
 
     private static final Credentials CREDENTIALS = new Credentials("Anna.Brown", "secret");
+    private static final AuthenticatedUser USER = new AuthenticatedUser(CREDENTIALS, Role.TRAINER, true);
+    private static final AuthenticatedUser TRAINEE_USER = new AuthenticatedUser(CREDENTIALS, Role.TRAINEE, true);
 
     @Mock
     private TrainerDao trainerDao;
@@ -35,20 +43,52 @@ class TrainerServiceTest {
     @Mock
     private PasswordGenerator passwordGenerator;
     @Mock
-    private AuthenticationService authenticationService;
+    private TrainingTypeService trainingTypeService;
     @InjectMocks
     private TrainerService service;
 
-    private void givenAuthenticatedTrainer(boolean active) {
+    private void givenStoredTrainer(boolean active) {
         User user = new User("Anna", "Brown", "Anna.Brown", "secret", active);
-        when(authenticationService.authenticateTrainer(CREDENTIALS))
-                .thenReturn(new Trainer(5L, user, new TrainingType("YOGA")));
+        when(trainerDao.findByUsername("Anna.Brown"))
+                .thenReturn(Optional.of(new Trainer(5L, user, new TrainingType("YOGA"))));
     }
 
     private Trainer savedTrainer() {
         ArgumentCaptor<Trainer> captor = ArgumentCaptor.forClass(Trainer.class);
         verify(trainerDao).save(captor.capture());
         return captor.getValue();
+    }
+
+    @Test
+    void register_resolvesTheSpecializationAndCreatesTheTrainer() {
+        when(trainingTypeService.requireById(2L)).thenReturn(new TrainingType(2L, "YOGA"));
+        when(usernameGenerator.generate("Anna", "Brown")).thenReturn("Anna.Brown");
+        when(passwordGenerator.generate()).thenReturn("pass123456");
+        when(trainerDao.save(any(Trainer.class))).thenAnswer(invocation -> {
+            Trainer toSave = invocation.getArgument(0);
+            return toSave.withId(5L);
+        });
+
+        Trainer result = service.register(new RegisterTrainer("Anna", "Brown", 2L));
+
+        assertEquals(5L, result.id());
+        assertEquals("Anna.Brown", result.user().username());
+        assertEquals("YOGA", result.specialization().name());
+    }
+
+    @Test
+    void register_withUnknownSpecialization_savesNothing() {
+        when(trainingTypeService.requireById(99L))
+                .thenThrow(new ValidationException("Unknown training type id: 99"));
+
+        assertThrows(ValidationException.class, () -> service.register(new RegisterTrainer("Anna", "Brown", 99L)));
+        verifyNoInteractions(trainerDao);
+    }
+
+    @Test
+    void register_withNullCommand_throws() {
+        assertThrows(IllegalArgumentException.class, () -> service.register(null));
+        verifyNoInteractions(trainerDao);
     }
 
     @Test
@@ -85,45 +125,47 @@ class TrainerServiceTest {
 
     @Test
     void getByUsername_returnsAuthenticatedTrainer() {
-        givenAuthenticatedTrainer(true);
+        givenStoredTrainer(true);
 
-        Trainer result = service.getByUsername(CREDENTIALS);
+        Trainer result = service.getByUsername(USER);
 
         assertEquals(5L, result.id());
     }
 
     @Test
-    void getByUsername_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class, () -> service.getByUsername(CREDENTIALS));
+    void getByUsername_forTraineeUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class, () -> service.getByUsername(TRAINEE_USER));
         verifyNoInteractions(trainerDao);
     }
 
     @Test
-    void changePassword_savesNewPassword() {
-        givenAuthenticatedTrainer(true);
+    void getByUsername_whenTheAccountIsGone_throwsNotFound() {
+        when(trainerDao.findByUsername("Anna.Brown")).thenReturn(Optional.empty());
 
-        service.changePassword(new PasswordChange(CREDENTIALS, "newPass"));
+        assertThrows(NotFoundException.class, () -> service.getByUsername(USER));
+    }
+
+    @Test
+    void changePassword_savesNewPassword() {
+        givenStoredTrainer(true);
+
+        service.changePassword(USER, "newPass");
 
         assertEquals("newPass", savedTrainer().user().password());
     }
 
     @Test
-    void changePassword_withWrongOldPassword_throwsAndSavesNothing() {
-        when(authenticationService.authenticateTrainer(CREDENTIALS)).thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.changePassword(new PasswordChange(CREDENTIALS, "newPass")));
+    void changePassword_withBlankPassword_throwsAndSavesNothing() {
+        assertThrows(IllegalArgumentException.class, () -> service.changePassword(USER, " "));
         verify(trainerDao, never()).save(any());
     }
 
     @Test
     void update_changesNamesAndSpecialization_butKeepsCredentials() {
-        givenAuthenticatedTrainer(true);
+        givenStoredTrainer(true);
         Trainer changes = new Trainer(null, User.of("Annie", "Braun"), new TrainingType("FITNESS"));
 
-        service.update(CREDENTIALS, changes);
+        service.update(USER, changes);
 
         Trainer saved = savedTrainer();
         assertEquals(5L, saved.id());
@@ -136,18 +178,18 @@ class TrainerServiceTest {
 
     @Test
     void update_withoutSpecialization_throwsAndSavesNothing() {
-        givenAuthenticatedTrainer(true);
+        givenStoredTrainer(true);
         Trainer changes = new Trainer(null, User.of("Annie", "Braun"), null);
 
-        assertThrows(IllegalArgumentException.class, () -> service.update(CREDENTIALS, changes));
+        assertThrows(IllegalArgumentException.class, () -> service.update(USER, changes));
         verify(trainerDao, never()).save(any());
     }
 
     @Test
     void toggleActive_deactivatesActiveTrainer() {
-        givenAuthenticatedTrainer(true);
+        givenStoredTrainer(true);
 
-        boolean result = service.toggleActive(CREDENTIALS);
+        boolean result = service.toggleActive(USER);
 
         assertFalse(result);
         assertFalse(savedTrainer().user().isActive());
@@ -155,9 +197,9 @@ class TrainerServiceTest {
 
     @Test
     void toggleActive_activatesInactiveTrainer() {
-        givenAuthenticatedTrainer(false);
+        givenStoredTrainer(false);
 
-        boolean result = service.toggleActive(CREDENTIALS);
+        boolean result = service.toggleActive(USER);
 
         assertTrue(result);
         assertTrue(savedTrainer().user().isActive());

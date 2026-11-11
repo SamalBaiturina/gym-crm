@@ -1,5 +1,7 @@
 package com.epam.gymcrm.domain.model;
 
+import com.epam.gymcrm.domain.exception.ValidationException;
+
 /**
  * Username and password of a person who calls an operation.
  * Both parts are required, so an invalid pair cannot be created.
@@ -8,10 +10,10 @@ public record Credentials(String username, String password) {
 
     public Credentials {
         if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("username is required");
+            throw new ValidationException("username is required");
         }
         if (password == null || password.isBlank()) {
-            throw new IllegalArgumentException("password is required");
+            throw new ValidationException("password is required");
         }
     }
 

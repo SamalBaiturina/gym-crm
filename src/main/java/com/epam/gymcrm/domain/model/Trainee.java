@@ -2,6 +2,7 @@ package com.epam.gymcrm.domain.model;
 
 import java.time.LocalDate;
 
+/** A person who attends trainings. */
 public record Trainee(Long id, User user, LocalDate dateOfBirth, String address)
         implements UserProfile<Trainee> {
 

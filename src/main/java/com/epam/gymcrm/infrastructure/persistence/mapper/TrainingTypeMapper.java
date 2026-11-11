@@ -8,6 +8,6 @@ import org.springframework.stereotype.Component;
 public class TrainingTypeMapper {
 
     public TrainingType toDomain(TrainingTypeEntity entity) {
-        return new TrainingType(entity.getName());
+        return new TrainingType(entity.getId(), entity.getName());
     }
 }

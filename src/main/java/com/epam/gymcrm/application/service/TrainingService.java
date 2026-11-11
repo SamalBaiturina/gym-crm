@@ -1,8 +1,12 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
+import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
-import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.exception.NotFoundException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -15,8 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
+/** Adding trainings and listing them for a trainee or a trainer. */
 @Service
 public class TrainingService {
 
@@ -24,7 +28,7 @@ public class TrainingService {
 
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
-    private AuthenticationService authenticationService;
+    private TrainerDao trainerDao;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -37,54 +41,73 @@ public class TrainingService {
     }
 
     @Autowired
-    public void setAuthenticationService(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
+    public void setTrainerDao(TrainerDao trainerDao) {
+        this.trainerDao = trainerDao;
     }
 
-    /** The authenticated trainer adds a training with the given trainee. */
+    /**
+     * Adds a training between the trainee and the trainer found by username. The training type is
+     * the trainer's specialization. The caller must be the trainee or the trainer of the training.
+     * The caller has already proved who he is (the web layer or the facade authenticates him),
+     * so no password is passed here.
+     *
+     * @throws ForbiddenOperationException if the caller is neither the trainee nor the trainer
+     */
     @Transactional
-    public Training addTraining(Credentials trainerCredentials, NewTraining request) {
-        Trainer trainer = authenticationService.authenticateTrainer(trainerCredentials);
-        String trainerUsername = trainerCredentials.username();
-        Validation.validated("add training by trainer username=" + trainerUsername, () -> {
-            Validation.requireNotNull(request, "training");
-            Validation.requireText(request.traineeUsername(), "traineeUsername");
-            Validation.requireText(request.name(), "trainingName");
-            Validation.requireNotNull(request.type(), "trainingType");
-            Validation.requireText(request.type().name(), "trainingType");
-            Validation.requireNotNull(request.date(), "trainingDate");
-            Validation.requirePositive(request.duration(), "trainingDuration");
+    public Training addTraining(AddTrainingCommand command) {
+        Validation.validated("add training", () -> {
+            Validation.requireNotNull(command, "training");
+            Validation.requireText(command.caller(), "caller");
+            Validation.requireText(command.traineeUsername(), "traineeUsername");
+            Validation.requireText(command.trainerUsername(), "trainerUsername");
+            Validation.requireText(command.name(), "trainingName");
+            Validation.requireNotNull(command.date(), "trainingDate");
+            Validation.requirePositive(command.duration(), "trainingDuration");
         });
+        requireTraineeOrTrainer(command);
 
-        Trainee trainee = traineeDao.findByUsername(request.traineeUsername())
-                .orElseThrow(() -> {
-                    log.warn("Cannot add training: trainee username={} not found (trainer username={})",
-                            request.traineeUsername(), trainerUsername);
-                    return new NoSuchElementException("Trainee not found: " + request.traineeUsername());
-                });
+        Trainee trainee = traineeDao.findByUsername(command.traineeUsername())
+                .orElseThrow(() -> notFound("trainee", command.traineeUsername()));
+        Trainer trainer = trainerDao.findByUsername(command.trainerUsername())
+                .orElseThrow(() -> notFound("trainer", command.trainerUsername()));
 
-        Training saved = trainingDao.save(new Training(null, trainee, trainer, request.name(),
-                request.type(), request.date(), request.duration()));
+        Training saved = trainingDao.save(new Training(null, trainee, trainer, command.name(),
+                trainer.specialization(), command.date(), command.duration()));
         log.info("Added training id={}, trainer={}, trainee={}",
-                saved.id(), trainerUsername, request.traineeUsername());
+                saved.id(), command.trainerUsername(), command.traineeUsername());
         return saved;
     }
 
     /** Trainings of the trainee, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
-        authenticationService.authenticateTrainee(credentials);
-        Validation.validated("get trainings of trainee username=" + credentials.username(),
+    public List<Training> getTraineeTrainings(AuthenticatedUser user, TraineeTrainingCriteria criteria) {
+        user.requireRole(Role.TRAINEE);
+        Validation.validated("get trainings of trainee username=" + user.username(),
                 () -> Validation.requireNotNull(criteria, "criteria"));
-        return trainingDao.findForTrainee(credentials.username(), criteria);
+        return trainingDao.findForTrainee(user.username(), criteria);
     }
 
     /** Trainings of the trainer, narrowed by the optional criteria. */
     @Transactional(readOnly = true)
-    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
-        authenticationService.authenticateTrainer(credentials);
-        Validation.validated("get trainings of trainer username=" + credentials.username(),
+    public List<Training> getTrainerTrainings(AuthenticatedUser user, TrainerTrainingCriteria criteria) {
+        user.requireRole(Role.TRAINER);
+        Validation.validated("get trainings of trainer username=" + user.username(),
                 () -> Validation.requireNotNull(criteria, "criteria"));
-        return trainingDao.findForTrainer(credentials.username(), criteria);
+        return trainingDao.findForTrainer(user.username(), criteria);
+    }
+
+    private void requireTraineeOrTrainer(AddTrainingCommand command) {
+        if (!command.caller().equals(command.traineeUsername())
+                && !command.caller().equals(command.trainerUsername())) {
+            log.warn("Cannot add training: caller username={} is neither trainee username={} nor trainer username={}",
+                    command.caller(), command.traineeUsername(), command.trainerUsername());
+            throw new ForbiddenOperationException("A training can be added only by its trainee or its trainer");
+        }
+    }
+
+    private NotFoundException notFound(String role, String username) {
+        log.warn("Cannot add training: {} username={} not found", role, username);
+        return new NotFoundException(role.substring(0, 1).toUpperCase() + role.substring(1)
+                + " not found: " + username);
     }
 }

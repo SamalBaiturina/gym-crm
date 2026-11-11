@@ -1,12 +1,12 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
 import com.epam.gymcrm.application.port.out.ProfileDao;
+import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.UserProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
@@ -83,7 +83,7 @@ public abstract class AbstractProfileDao<E, T extends UserProfile<T>> extends Ab
         E entity = entityManager.find(entityClass, id);
         if (entity == null) {
             log.warn("Cannot find {} id={}", role, id);
-            throw new NoSuchElementException(role + " not found: " + id);
+            throw new NotFoundException(role + " not found: " + id);
         }
         return entity;
     }

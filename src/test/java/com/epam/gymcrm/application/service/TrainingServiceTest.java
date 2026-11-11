@@ -1,8 +1,10 @@
 package com.epam.gymcrm.application.service;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
+import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.TraineeTrainingCriteria;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
@@ -12,21 +14,15 @@ import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -35,15 +31,13 @@ import static org.mockito.Mockito.when;
 class TrainingServiceTest {
 
     private static final LocalDate DATE = LocalDate.of(2026, 1, 10);
-    private static final Credentials TRAINER_CREDENTIALS = new Credentials("Anna.Brown", "secret");
-    private static final Credentials TRAINEE_CREDENTIALS = new Credentials("John.Smith", "secret");
+    private static final AuthenticatedUser TRAINER_USER =
+            new AuthenticatedUser(new Credentials("Anna.Brown", "secret"), Role.TRAINER, true);
+    private static final AuthenticatedUser TRAINEE_USER =
+            new AuthenticatedUser(new Credentials("John.Smith", "secret"), Role.TRAINEE, true);
 
     @Mock
     private TrainingDao trainingDao;
-    @Mock
-    private TraineeDao traineeDao;
-    @Mock
-    private AuthenticationService authenticationService;
     @InjectMocks
     private TrainingService service;
 
@@ -59,94 +53,6 @@ class TrainingServiceTest {
         return new Training(1L, trainee(), trainer(), "Yoga", new TrainingType("YOGA"), DATE, 60);
     }
 
-    private NewTraining request(String name, int duration) {
-        return new NewTraining("John.Smith", name, new TrainingType("YOGA"), DATE, duration);
-    }
-
-    // ---------- add training ----------
-
-    @Test
-    void addTraining_savesTrainingWithTheTraineeAndTheTrainer() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS)).thenReturn(trainer());
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee()));
-        when(trainingDao.save(any(Training.class))).thenAnswer(invocation -> {
-            Training toSave = invocation.getArgument(0);
-            return toSave.withId(10L);
-        });
-
-        Training result = service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60));
-
-        assertEquals(10L, result.id());
-        ArgumentCaptor<Training> captor = ArgumentCaptor.forClass(Training.class);
-        verify(trainingDao).save(captor.capture());
-        Training saved = captor.getValue();
-        assertEquals(trainee(), saved.trainee());
-        assertEquals(trainer(), saved.trainer());
-        assertEquals("Yoga", saved.trainingName());
-        assertEquals("YOGA", saved.trainingType().name());
-        assertEquals(DATE, saved.trainingDate());
-        assertEquals(60, saved.trainingDuration());
-    }
-
-    @Test
-    void addTraining_withWrongPassword_throwsAndSavesNothing() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withUnknownTrainee_throwsAndSavesNothing() {
-        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.empty());
-
-        assertThrows(NoSuchElementException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 60)));
-        verify(trainingDao, never()).save(any());
-    }
-
-    @Test
-    void addTraining_withBlankName_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request(" ", 60)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withNonPositiveDuration_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.addTraining(TRAINER_CREDENTIALS, request("Yoga", 0)));
-        verifyNoInteractions(trainingDao);
-    }
-
-    @Test
-    void addTraining_withMissingDate_throws() {
-        NewTraining noDate = new NewTraining("John.Smith", "Yoga", new TrainingType("YOGA"), null, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noDate));
-    }
-
-    @Test
-    void addTraining_withMissingType_throws() {
-        NewTraining noType = new NewTraining("John.Smith", "Yoga", null, DATE, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noType));
-    }
-
-    @Test
-    void addTraining_withMissingTraineeUsername_throws() {
-        NewTraining noTrainee = new NewTraining(" ", "Yoga", new TrainingType("YOGA"), DATE, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, noTrainee));
-    }
-
-    @Test
-    void addTraining_withNullRequest_throws() {
-        assertThrows(IllegalArgumentException.class, () -> service.addTraining(TRAINER_CREDENTIALS, null));
-    }
-
     // ---------- lists ----------
 
     @Test
@@ -156,26 +62,22 @@ class TrainingServiceTest {
         List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainee("John.Smith", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTraineeTrainings(TRAINEE_CREDENTIALS, criteria);
+        List<Training> result = service.getTraineeTrainings(TRAINEE_USER, criteria);
 
         assertSame(trainings, result);
-        verify(authenticationService).authenticateTrainee(TRAINEE_CREDENTIALS);
     }
 
     @Test
-    void getTraineeTrainings_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainee(TRAINEE_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, TraineeTrainingCriteria.any()));
+    void getTraineeTrainings_forTrainerUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class,
+                () -> service.getTraineeTrainings(TRAINER_USER, TraineeTrainingCriteria.any()));
         verifyNoInteractions(trainingDao);
     }
 
     @Test
     void getTraineeTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTraineeTrainings(TRAINEE_CREDENTIALS, null));
+                () -> service.getTraineeTrainings(TRAINEE_USER, null));
         verifyNoInteractions(trainingDao);
     }
 
@@ -185,26 +87,22 @@ class TrainingServiceTest {
         List<Training> trainings = List.of(training());
         when(trainingDao.findForTrainer("Anna.Brown", criteria)).thenReturn(trainings);
 
-        List<Training> result = service.getTrainerTrainings(TRAINER_CREDENTIALS, criteria);
+        List<Training> result = service.getTrainerTrainings(TRAINER_USER, criteria);
 
         assertSame(trainings, result);
-        verify(authenticationService).authenticateTrainer(TRAINER_CREDENTIALS);
     }
 
     @Test
-    void getTrainerTrainings_withWrongPassword_throwsAndDoesNotTouchDao() {
-        when(authenticationService.authenticateTrainer(TRAINER_CREDENTIALS))
-                .thenThrow(new AuthenticationException());
-
-        assertThrows(AuthenticationException.class,
-                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, TrainerTrainingCriteria.any()));
+    void getTrainerTrainings_forTraineeUser_isForbiddenAndDoesNotTouchDao() {
+        assertThrows(ForbiddenOperationException.class,
+                () -> service.getTrainerTrainings(TRAINEE_USER, TrainerTrainingCriteria.any()));
         verifyNoInteractions(trainingDao);
     }
 
     @Test
     void getTrainerTrainings_withNullCriteria_throwsAndDoesNotTouchDao() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTrainerTrainings(TRAINER_CREDENTIALS, null));
+                () -> service.getTrainerTrainings(TRAINER_USER, null));
         verifyNoInteractions(trainingDao);
     }
 }

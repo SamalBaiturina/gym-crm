@@ -6,6 +6,7 @@ import com.epam.gymcrm.domain.model.Training;
 
 import java.util.List;
 
+/** Storage of trainings. */
 public interface TrainingDao extends BaseDao<Training> {
 
     /** Trainings of the trainee with the given username, narrowed by the optional criteria. */

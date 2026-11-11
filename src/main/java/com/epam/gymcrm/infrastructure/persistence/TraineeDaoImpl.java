@@ -64,4 +64,16 @@ public class TraineeDaoImpl extends AbstractProfileDao<TraineeEntity, Trainee> i
         entity.getTrainers().addAll(references);
         log.debug("Trainee id={} now has {} trainers", trainee.id(), references.size());
     }
+
+    @Override
+    public List<Trainee> findAssignedTo(String trainerUsername) {
+        return entityManager.createQuery(SELECT_TRAINEE
+                                + "where t.id in (select te.id from TraineeEntity te "
+                                + "join te.trainers a join a.user au where au.username = :username)",
+                        TraineeEntity.class)
+                .setParameter("username", trainerUsername)
+                .getResultList().stream()
+                .map(this::toDomain)
+                .toList();
+    }
 }

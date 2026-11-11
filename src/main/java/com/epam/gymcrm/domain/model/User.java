@@ -3,6 +3,7 @@ package com.epam.gymcrm.domain.model;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+/** Account data shared by trainees and trainers. toString never prints the password. */
 public record User(String firstName, String lastName, String username,
                    String password, boolean isActive) {
 
