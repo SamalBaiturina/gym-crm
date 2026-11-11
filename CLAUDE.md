@@ -23,7 +23,12 @@ This file is the technical context for AI assistants. Setup instructions and the
 
 - The application starts from `GymCrmApplication` (`@SpringBootApplication`). Spring Boot auto-configures the web server,
   the data source (HikariCP), JPA and transactions, so there is no hand-written Spring configuration for them.
-- Settings are in `src/main/resources/application.yml`.
+- `application.yml` holds the settings common to all environments. The database settings are in one file per Spring profile:
+  `application-local.yml`, `application-dev.yml`, `application-stg.yml`, `application-prod.yml`.
+- `local` is the default profile. Select another one with `--spring.profiles.active=<name>` or `SPRING_PROFILES_ACTIVE`
+  (with Maven: `-Dspring-boot.run.profiles=<name>`).
+- Every environment has its own database (`gymcrm`, `gymcrm_dev`, `gymcrm_stg`, `gymcrm_prod`) and its own connection pool size.
+  Passwords and hosts come from environment variables (`DB_PASSWORD`, `DB_HOST`, `DB_USER`); `stg` and `prod` require `DB_PASSWORD`.
 
 ## Architecture
 

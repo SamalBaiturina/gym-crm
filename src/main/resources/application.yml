@@ -1,12 +1,10 @@
+# Settings common to all environments. The database settings are in application-<profile>.yml.
 spring:
   application:
     name: gym-crm
-  datasource:
-    url: jdbc:postgresql://localhost:5432/gymcrm
-    username: postgres
-    password: ${DB_PASSWORD:postgres}
-    hikari:
-      maximum-pool-size: 5
+  # the profile used when none is selected
+  profiles:
+    default: local
   jpa:
     hibernate:
       ddl-auto: validate

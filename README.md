@@ -36,11 +36,11 @@ CREATE DATABASE gymcrm;
 ```
 
 then execute `src/main/resources/db/schema.sql` against `gymcrm`.
+The other environments use their own databases (`gymcrm_dev`, `gymcrm_stg`, `gymcrm_prod`), see [Environments](#environments).
 The script creates the tables and fills the constant `training_type` table
 (`1 FITNESS`, `2 YOGA`, `3 ZUMBA`, `4 STRETCHING`, `5 RESISTANCE`).
 
-Connection settings are in `src/main/resources/application.yml`.
-The password is read from the `DB_PASSWORD` environment variable (default `postgres`) and is never committed.
+Connection settings depend on the environment, see [Environments](#environments).
 Hibernate runs with `ddl-auto: validate`: it checks the schema but does not change it.
 
 ## Run
@@ -50,8 +50,35 @@ export DB_PASSWORD=your_password
 mvn spring-boot:run
 ```
 
-The API listens on port 8080 (use `--server.port=9090` to change it).
+This starts the `local` profile. The API listens on port 8080 (use `--server.port=9090` to change it).
 An executable jar is built with `mvn clean package` and started with `java -jar target/gym-crm-1.0-SNAPSHOT.jar`.
+
+## Environments
+
+The application has four Spring profiles: `local`, `dev`, `stg` and `prod`. Each one has its own file with the database
+settings in `src/main/resources` (`application-local.yml`, `application-dev.yml`, `application-stg.yml`, `application-prod.yml`);
+`application.yml` holds the settings common to all of them. Without an active profile, `local` is used.
+
+| Profile | Database | Host | User | Password | Connection pool |
+|---------|----------|------|------|----------|-----------------|
+| `local` | `gymcrm` | `localhost` | `postgres` | `DB_PASSWORD`, default `postgres` | 5 |
+| `dev` | `gymcrm_dev` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, default `postgres` | 5 |
+| `stg` | `gymcrm_stg` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 10 |
+| `prod` | `gymcrm_prod` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 20 |
+
+Create the database of the environment and run the schema script against it (see Database).
+Passwords are read from environment variables and are never committed. `stg` and `prod` have no default password:
+set `DB_PASSWORD`, otherwise the database rejects the connection and the application does not start.
+
+Select a profile in one of three ways:
+
+```
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+java -jar target/gym-crm-1.0-SNAPSHOT.jar --spring.profiles.active=dev
+SPRING_PROFILES_ACTIVE=dev java -jar target/gym-crm-1.0-SNAPSHOT.jar
+```
+
+The active profile is written at the start of the log: `The following 1 profile is active: "dev"`.
 
 ## REST API
 
@@ -175,5 +202,6 @@ mvn clean test
   and that saving a training or changing trainers does not load the trainee and trainers again.
 - `ServiceLoggingTest` checks that failures are logged as warnings with the username; the logging filters have their own tests.
 - `ApiDocumentationTest` checks that every controller and endpoint has its OpenAPI description.
+- `EnvironmentProfilesTest` checks that every profile points to its own database.
 - `mvn clean verify` runs the tests and fails if line coverage drops below 80%.
 - JaCoCo report: `target/site/jacoco/index.html`.
