@@ -94,8 +94,6 @@
                 <version>0.8.12</version>
                 <configuration>
                     <excludes>
-                        <exclude>com/epam/gymcrm/Main.class</exclude>
-                        <exclude>com/epam/gymcrm/RestApplication.class</exclude>
                         <exclude>com/epam/gymcrm/GymCrmApplication.class</exclude>
                     </excludes>
                 </configuration>
