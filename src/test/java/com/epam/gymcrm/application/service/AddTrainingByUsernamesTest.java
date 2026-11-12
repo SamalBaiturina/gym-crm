@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
@@ -40,6 +41,8 @@ class AddTrainingByUsernamesTest {
     private TraineeDao traineeDao;
     @Mock
     private TrainerDao trainerDao;
+    @Mock
+    private UsageMetrics usageMetrics;
     @InjectMocks
     private TrainingService service;
 

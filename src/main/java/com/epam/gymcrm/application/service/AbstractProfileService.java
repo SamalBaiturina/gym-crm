@@ -1,6 +1,7 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.ProfileDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Role;
@@ -18,7 +19,7 @@ import java.util.Locale;
  * password change, update of the names and activation. Subclasses add only what differs.
  * <p>
  * The operations on an existing account take an {@link AuthenticatedUser}: the caller has already been
- * authenticated (by the web layer or the facade), so the services load the account by username and do not
+ * authenticated (by the web layer), so the services load the account by username and do not
  * check the password again.
  */
 public abstract class AbstractProfileService<T extends UserProfile<T>> {
@@ -29,6 +30,7 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
     private final String roleName;
     private UsernameGenerator usernameGenerator;
     private PasswordGenerator passwordGenerator;
+    private UsageMetrics usageMetrics;
 
     /** @param role the role served by this service: it is used in validation and log messages */
     protected AbstractProfileService(Role role) {
@@ -44,6 +46,11 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
     @Autowired
     public void setPasswordGenerator(PasswordGenerator passwordGenerator) {
         this.passwordGenerator = passwordGenerator;
+    }
+
+    @Autowired
+    public void setUsageMetrics(UsageMetrics usageMetrics) {
+        this.usageMetrics = usageMetrics;
     }
 
     /** The storage of this kind of profile. */
@@ -80,6 +87,7 @@ public abstract class AbstractProfileService<T extends UserProfile<T>> {
         String password = passwordGenerator.generate();
         T saved = dao().save(profile.withUser(user.withCredentials(username, password)));
         log.info("Created {} id={}, username={}", roleName, saved.id(), username);
+        usageMetrics.registrationCompleted(role);
         return saved;
     }
 

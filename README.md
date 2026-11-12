@@ -18,10 +18,10 @@ Hexagonal (onion) layout, dependencies point towards the domain model:
 
 - `domain.model` - records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`), value objects (`Credentials`, `PasswordChange`, training search criteria), read models (`TraineeProfile`, `TrainerProfile`) and the `UserProfile` interface shared by trainee and trainer
 - `domain.exception` - `ValidationException` (400), `NotFoundException` (404), `ForbiddenOperationException` (403)
-- `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs)
+- `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs) and `UsageMetrics`, the port through which the services report business events to be counted
 - `application.service` - business logic, authentication (`AuthenticationException`, 401), validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
 - `infrastructure.persistence` - Hibernate DAOs (`AbstractProfileDao` is their common base), JPA entities (`entity` package) and one mapper per entity (`mapper` package)
-- `infrastructure.monitoring` - the custom Actuator health indicators
+- `infrastructure.monitoring` - the custom Actuator health indicators and the Micrometer implementation of `UsageMetrics`
 - `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters, registered as Spring beans)
 
 JPA entities are separate classes in the infrastructure layer, so the domain model stays free of persistence annotations.
@@ -97,6 +97,16 @@ Besides the standard checks (database, disk space), the application has two heal
 
 - `trainingTypes`: `UP` if the training types table is filled (trainers cannot be registered without it), `DOWN` if it is empty or cannot be read. Detail: `count`.
 - `connectionPool`: state of the HikariCP connection pool. `DOWN` when all connections are busy and callers wait for one. Details: `active`, `idle`, `total`, `max`, `waiting`.
+
+The application also counts three business events. They are custom Prometheus metrics (counters) and appear in `/actuator/prometheus`:
+
+| Metric | What it counts |
+|--------|----------------|
+| `gymcrm_registrations_total{role="trainee"}` and `{role="trainer"}` | Created accounts, one series per role |
+| `gymcrm_trainings_added_total` | Trainings saved |
+| `gymcrm_auth_failures_total` | Requests with an unknown username or a wrong password |
+
+A counter starts at 0 when the application starts and grows until the next restart.
 
 The Actuator endpoints do not need the Basic authentication header and are not written to the REST call log.
 In a real deployment they must be closed from outside (a separate management port or a firewall).
@@ -225,6 +235,6 @@ mvn clean test
 - `ServiceLoggingTest` checks that failures are logged as warnings with the username; the logging filters have their own tests.
 - `ApiDocumentationTest` checks that every controller and endpoint has its OpenAPI description.
 - `EnvironmentProfilesTest` checks that every profile points to its own database.
-- The health indicators are unit tested with Mockito.
+- The health indicators are unit tested with Mockito; `MicrometerUsageMetricsTest` checks the counters on an in-memory registry and `UsageMetricsReportingTest` checks that the services report the events (and only successful ones).
 - `mvn clean verify` runs the tests and fails if line coverage drops below 80%.
 - JaCoCo report: `target/site/jacoco/index.html`.

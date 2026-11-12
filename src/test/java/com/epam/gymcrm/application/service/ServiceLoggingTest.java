@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
@@ -53,6 +54,8 @@ class ServiceLoggingTest {
     private UsernameGenerator usernameGenerator;
     @Mock
     private PasswordGenerator passwordGenerator;
+    @Mock
+    private UsageMetrics usageMetrics;
     @InjectMocks
     private TrainingService trainingService;
     @InjectMocks

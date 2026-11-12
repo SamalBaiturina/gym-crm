@@ -31,6 +31,9 @@ This file is the technical context for AI assistants. Setup instructions and the
   Passwords and hosts come from environment variables (`DB_PASSWORD`, `DB_HOST`, `DB_USER`); `stg` and `prod` require `DB_PASSWORD`.
 - Actuator exposes only `health`, `info` and `prometheus` (`management.endpoints.web.exposure.include`).
   The Actuator endpoints are outside `BasicAuthInterceptor`, so they need no credentials.
+- Custom metrics: services call the `UsageMetrics` port (`registrationCompleted(role)`, `trainingAdded()`, `authenticationFailed()`),
+  `MicrometerUsageMetrics` turns the calls into the counters `gymcrm.registrations{role}`, `gymcrm.trainings.added`,
+  `gymcrm.auth.failures`. Services must not import Micrometer. A service test that uses `@InjectMocks` needs `@Mock UsageMetrics`.
 
 ## Architecture
 
@@ -40,11 +43,11 @@ Hexagonal (ports and adapters). Dependencies point inward only: `infrastructure`
 | --- | --- |
 | `domain.model` | Immutable records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`), value objects (`Credentials`, `AuthenticatedUser`, `Role`, `PasswordChange`, training search criteria) |
 | `domain.exception` | `ValidationException`, `NotFoundException`, `ForbiddenOperationException` |
-| `application.port.out` | DAO interfaces implemented by the persistence layer |
+| `application.port.out` | DAO interfaces implemented by the persistence layer, and `UsageMetrics` (business events that are counted) |
 | `application.service` | Services, use-case commands (`RegisterTrainee`, `RegisterTrainer`, `UpdateTrainee`, `AddTrainingCommand`), read models (`TraineeProfile`, `TrainerProfile`), `AuthenticationException` |
 | `infrastructure.web` | Controllers, DTOs, error handling, security, request logging filters |
 | `infrastructure.persistence` | DAO implementations, JPA entities, mappers |
-| `infrastructure.monitoring` | Custom Actuator health indicators |
+| `infrastructure.monitoring` | Custom Actuator health indicators, `MicrometerUsageMetrics` (implements `UsageMetrics`) |
 
 Rules:
 

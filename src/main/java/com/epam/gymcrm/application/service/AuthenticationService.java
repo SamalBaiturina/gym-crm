@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
@@ -26,6 +27,7 @@ public class AuthenticationService {
 
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
+    private UsageMetrics usageMetrics;
 
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
@@ -35,6 +37,11 @@ public class AuthenticationService {
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
+    }
+
+    @Autowired
+    public void setUsageMetrics(UsageMetrics usageMetrics) {
+        this.usageMetrics = usageMetrics;
     }
 
     /**
@@ -51,6 +58,7 @@ public class AuthenticationService {
                         .map(trainer -> new AuthenticatedUser(credentials, Role.TRAINER, trainer.user().isActive())))
                 .orElseThrow(() -> {
                     log.warn("Authentication failed for username={}", credentials.username());
+                    usageMetrics.authenticationFailed();
                     return new AuthenticationException();
                 });
     }
