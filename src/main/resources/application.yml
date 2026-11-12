@@ -10,3 +10,23 @@ spring:
       ddl-auto: validate
     # services map entities to domain objects inside a transaction, no lazy loading in controllers
     open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # only what is needed, every other Actuator endpoint stays closed
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Gym CRM System
+    description: Trainees, trainers and their trainings

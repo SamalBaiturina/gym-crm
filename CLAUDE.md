@@ -29,6 +29,8 @@ This file is the technical context for AI assistants. Setup instructions and the
   (with Maven: `-Dspring-boot.run.profiles=<name>`).
 - Every environment has its own database (`gymcrm`, `gymcrm_dev`, `gymcrm_stg`, `gymcrm_prod`) and its own connection pool size.
   Passwords and hosts come from environment variables (`DB_PASSWORD`, `DB_HOST`, `DB_USER`); `stg` and `prod` require `DB_PASSWORD`.
+- Actuator exposes only `health`, `info` and `prometheus` (`management.endpoints.web.exposure.include`).
+  The Actuator endpoints are outside `BasicAuthInterceptor`, so they need no credentials.
 
 ## Architecture
 
@@ -42,6 +44,7 @@ Hexagonal (ports and adapters). Dependencies point inward only: `infrastructure`
 | `application.service` | Services, use-case commands (`RegisterTrainee`, `RegisterTrainer`, `UpdateTrainee`, `AddTrainingCommand`), read models (`TraineeProfile`, `TrainerProfile`), `AuthenticationException` |
 | `infrastructure.web` | Controllers, DTOs, error handling, security, request logging filters |
 | `infrastructure.persistence` | DAO implementations, JPA entities, mappers |
+| `infrastructure.monitoring` | Custom Actuator health indicators |
 
 Rules:
 
@@ -53,7 +56,7 @@ Rules:
 ## Request flow and security
 
 1. `TransactionIdFilter` puts a `transactionId` into the logging context (MDC) and returns it in a response header.
-2. `RestCallLoggingFilter` logs the request and the response (level by status, passwords masked).
+2. `RestCallLoggingFilter` logs the request and the response (level by status, passwords masked). It skips `/actuator` calls.
    Both filters are `@Component` beans; `@Order` keeps this sequence.
 3. `BasicAuthInterceptor` authenticates the caller once through `AuthenticationService.authenticateAndLoad`,
    then checks the active flag and the `{username}` path variable, and stores an `AuthenticatedUser`

@@ -21,6 +21,7 @@ Hexagonal (onion) layout, dependencies point towards the domain model:
 - `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs)
 - `application.service` - business logic, authentication (`AuthenticationException`, 401), validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
 - `infrastructure.persistence` - Hibernate DAOs (`AbstractProfileDao` is their common base), JPA entities (`entity` package) and one mapper per entity (`mapper` package)
+- `infrastructure.monitoring` - the custom Actuator health indicators
 - `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters, registered as Spring beans)
 
 JPA entities are separate classes in the infrastructure layer, so the domain model stays free of persistence annotations.
@@ -79,6 +80,26 @@ SPRING_PROFILES_ACTIVE=dev java -jar target/gym-crm-1.0-SNAPSHOT.jar
 ```
 
 The active profile is written at the start of the log: `The following 1 profile is active: "dev"`.
+
+## Monitoring
+
+Spring Boot Actuator exposes three endpoints on the application port (all other Actuator endpoints are closed):
+
+| Endpoint | What it shows |
+|----------|---------------|
+| `GET /actuator/health` | Overall status and the status of every check |
+| `GET /actuator/info` | Application name and description |
+| `GET /actuator/prometheus` | Metrics in the Prometheus format |
+
+The probes `/actuator/health/liveness` and `/actuator/health/readiness` are available too.
+
+Besides the standard checks (database, disk space), the application has two health indicators of its own:
+
+- `trainingTypes`: `UP` if the training types table is filled (trainers cannot be registered without it), `DOWN` if it is empty or cannot be read. Detail: `count`.
+- `connectionPool`: state of the HikariCP connection pool. `DOWN` when all connections are busy and callers wait for one. Details: `active`, `idle`, `total`, `max`, `waiting`.
+
+The Actuator endpoints do not need the Basic authentication header and are not written to the REST call log.
+In a real deployment they must be closed from outside (a separate management port or a firewall).
 
 ## REST API
 
@@ -188,6 +209,7 @@ The controllers are annotated with Swagger (OpenAPI) annotations: a tag per cont
   A request rejected before its body was read (for example 401) is logged without a body.
 - The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on only in tests (`src/test/resources/logback-test.xml`).
 - Failures in the services and DAOs (validation, authentication, entity not found) are logged as WARN with the username or id before the exception is thrown.
+- Calls to `/actuator/**` are not logged: health checks and metric scrapes come every few seconds.
 
 ## Tests
 
@@ -203,5 +225,6 @@ mvn clean test
 - `ServiceLoggingTest` checks that failures are logged as warnings with the username; the logging filters have their own tests.
 - `ApiDocumentationTest` checks that every controller and endpoint has its OpenAPI description.
 - `EnvironmentProfilesTest` checks that every profile points to its own database.
+- The health indicators are unit tested with Mockito.
 - `mvn clean verify` runs the tests and fails if line coverage drops below 80%.
 - JaCoCo report: `target/site/jacoco/index.html`.
