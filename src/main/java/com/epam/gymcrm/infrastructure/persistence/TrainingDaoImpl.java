@@ -23,6 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Hibernate DAO of the trainings: saves a training and finds trainings by id or by the search criteria
+ * of a trainee or a trainer.
+ */
 @Repository
 public class TrainingDaoImpl extends AbstractJpaDao implements TrainingDao {
 

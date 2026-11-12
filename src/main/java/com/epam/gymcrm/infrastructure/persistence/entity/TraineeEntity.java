@@ -17,6 +17,10 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * JPA entity of the table {@code trainee}. It keeps the trainee's own fields, the {@link UserEntity},
+ * the assigned trainers and the trainings (deleted together with the trainee).
+ */
 @Entity
 @Table(name = "trainee")
 public class TraineeEntity {

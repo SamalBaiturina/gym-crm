@@ -14,6 +14,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Hibernate DAO of the trainees. The logic shared with the trainers is in {@link AbstractProfileDao};
+ * this class adds deleting a trainee, changing the trainee's trainers and finding the trainees of a trainer.
+ */
 @Repository
 public class TraineeDaoImpl extends AbstractProfileDao<TraineeEntity, Trainee> implements TraineeDao {
 
