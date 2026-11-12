@@ -45,6 +45,23 @@ class RestCallLoggingFilterTest {
     }
 
     @Test
+    void maskHidesAPasswordThatWasCutOff() {
+        assertEquals("{\"password\":\"***\"", RestCallLoggingFilter.mask("{\"password\":\"abc"));
+        assertEquals("{\"password\":\"***\"", RestCallLoggingFilter.mask("{\"password\":\"ab\\"));
+    }
+
+    @Test
+    void applicationStillReadsTheWholeBodyWhenItIsLargerThanTheCacheLimit() throws Exception {
+        String body = "{\"data\":\"" + "x".repeat(20_000) + "\"}";
+        FilterChain readsEverything = (req, res) ->
+                res.getWriter().write(String.valueOf(req.getInputStream().readAllBytes().length));
+
+        filter.doFilter(request("POST", "/x", body), response, readsEverything);
+
+        assertEquals(String.valueOf(body.length()), response.getContentAsString());
+    }
+
+    @Test
     void successfulCallIsLoggedAtInfoWithoutPasswords() throws Exception {
         try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
             filter.doFilter(request("POST", "/trainees", "{\"firstName\":\"John\"}"), response,
@@ -112,5 +129,16 @@ class RestCallLoggingFilterTest {
             assertTrue(line.contains("...(truncated)"));
             assertTrue(line.length() < 1300);
         }
+    }
+
+    @Test
+    void actuatorCallsAreNotLogged() throws Exception {
+        try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
+            filter.doFilter(request("GET", "/actuator/health", ""), response,
+                    application(200, "{\"status\":\"UP\"}"));
+
+            assertTrue(logs.messages(Level.INFO).isEmpty());
+        }
+        assertEquals("{\"status\":\"UP\"}", response.getContentAsString());
     }
 }

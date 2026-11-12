@@ -25,8 +25,9 @@ import java.util.regex.Pattern;
  * <p>
  * The request body is logged only if the application has read it: a request rejected earlier
  * (for example with 401) is logged without a body.
+ * <p>
+ * Calls to /actuator are not logged.
  */
-
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class RestCallLoggingFilter extends OncePerRequestFilter {
@@ -35,13 +36,17 @@ public class RestCallLoggingFilter extends OncePerRequestFilter {
 
     private static final String FORMAT = "{} -> {} ({} ms) request={} response={}";
     private static final int MAX_BODY_LENGTH = 1000;
-    private static final Pattern SECRET_FIELDS =
-            Pattern.compile("(\"(?:password|newPassword)\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\"");
+    /** How much of a request body is kept for the log. The application still reads the whole body. */
+    private static final int MAX_CACHED_REQUEST_BYTES = 10_000;
+    /** A password value is masked even if the cache limit cut it off before the closing quote. */
+    private static final Pattern SECRET_FIELDS = Pattern.compile(
+            "(\"(?:password|newPassword)\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\\\\?(?:\"|$)");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+        ContentCachingRequestWrapper wrappedRequest =
+                new ContentCachingRequestWrapper(request, MAX_CACHED_REQUEST_BYTES);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
         long start = System.nanoTime();
         try {
@@ -53,7 +58,7 @@ public class RestCallLoggingFilter extends OncePerRequestFilter {
         }
     }
 
-    /** Replaces the value of the password fields in a JSON text with "***". */
+    /** Replaces the value of the password fields in a JSON text with "***", also when the value is cut off. */
     public static String mask(String json) {
         return SECRET_FIELDS.matcher(json).replaceAll("$1\"***\"");
     }
@@ -81,5 +86,11 @@ public class RestCallLoggingFilter extends OncePerRequestFilter {
         }
         String text = mask(new String(body, StandardCharsets.UTF_8).replaceAll("[\\r\\n]+", " "));
         return text.length() > MAX_BODY_LENGTH ? text.substring(0, MAX_BODY_LENGTH) + "...(truncated)" : text;
+    }
+
+    /** Health checks and metric scrapes come every few seconds; logging them would bury the real calls. */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/actuator");
     }
 }
