@@ -21,6 +21,11 @@ class TrainingTypeDaoImplTest extends JpaTestBase {
     }
 
     @Test
+    void countReturnsTheNumberOfTypes() {
+        assertEquals(2L, tx.execute(status -> trainingTypeDao.count()).longValue());
+    }
+
+    @Test
     void findByIdFindsAnExistingType() {
         TrainingType yoga = tx.execute(status -> trainingTypeDao.findAll()).stream()
                 .filter(type -> type.name().equals("YOGA"))

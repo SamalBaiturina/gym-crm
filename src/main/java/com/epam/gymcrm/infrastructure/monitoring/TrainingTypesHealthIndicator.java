@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Health check of the training types. The application cannot register a trainer or add a training without them.
  * The table is filled by db/schema.sql, so an empty table means that the schema script was not run.
+ * The types are only counted (one query in the database), no rows are loaded.
  * Shown in /actuator/health as "trainingTypes".
  */
 @Component
@@ -22,7 +23,7 @@ public class TrainingTypesHealthIndicator extends AbstractHealthIndicator {
 
     @Override
     protected void doHealthCheck(Health.Builder builder) {
-        int count = trainingTypeService.getAll().size();
+        long count = trainingTypeService.count();
         if (count == 0) {
             builder.down().withDetail("reason", "no training types, run db/schema.sql");
         } else {

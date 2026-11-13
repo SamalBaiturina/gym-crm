@@ -1,7 +1,6 @@
 package com.epam.gymcrm.infrastructure.monitoring;
 
 import com.epam.gymcrm.application.service.TrainingTypeService;
-import com.epam.gymcrm.domain.model.TrainingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,8 +8,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,18 +23,17 @@ class TrainingTypesHealthIndicatorTest {
 
     @Test
     void isUpAndCountsTheTypesWhenTheyExist() {
-        when(trainingTypeService.getAll())
-                .thenReturn(List.of(new TrainingType(1L, "FITNESS"), new TrainingType(2L, "YOGA")));
+        when(trainingTypeService.count()).thenReturn(2L);
 
         Health health = indicator.health();
 
         assertEquals(Status.UP, health.getStatus());
-        assertEquals(2, health.getDetails().get("count"));
+        assertEquals(2L, health.getDetails().get("count"));
     }
 
     @Test
     void isDownWhenTheTableIsEmpty() {
-        when(trainingTypeService.getAll()).thenReturn(List.of());
+        when(trainingTypeService.count()).thenReturn(0L);
 
         Health health = indicator.health();
 
@@ -47,7 +43,7 @@ class TrainingTypesHealthIndicatorTest {
 
     @Test
     void isDownWhenTheDatabaseCannotBeRead() {
-        when(trainingTypeService.getAll()).thenThrow(new IllegalStateException("no connection"));
+        when(trainingTypeService.count()).thenThrow(new IllegalStateException("no connection"));
 
         Health health = indicator.health();
 
