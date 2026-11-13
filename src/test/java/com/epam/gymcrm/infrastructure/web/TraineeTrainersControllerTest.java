@@ -1,37 +1,23 @@
 package com.epam.gymcrm.infrastructure.web;
 
-import com.epam.gymcrm.application.service.AuthenticationService;
-import com.epam.gymcrm.application.service.TraineeService;
 import com.epam.gymcrm.domain.exception.NotFoundException;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
 import com.epam.gymcrm.domain.model.User;
-import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -40,37 +26,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(SpringExtension.class)
-@WebAppConfiguration
-@ContextConfiguration(classes = {WebConfig.class, TraineeTrainersControllerTest.MocksConfig.class})
-class TraineeTrainersControllerTest {
-
-    @Configuration
-    static class MocksConfig {
-        @Bean
-        static BeanFactoryPostProcessor serviceMocks() {
-            return ServiceMocks.forWebLayer();
-        }
-    }
+class TraineeTrainersControllerTest extends ControllerTestBase {
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
     private static final AuthenticatedUser JOHN_USER = new AuthenticatedUser(JOHN, Role.TRAINEE, true);
     private static final String JOHN_HEADER = "Basic " + Base64.getEncoder()
             .encodeToString("John.Smith:secret12345".getBytes(StandardCharsets.UTF_8));
 
-    @Autowired
-    private WebApplicationContext webContext;
-    @Autowired
-    private AuthenticationService authenticationService;
-    @Autowired
-    private TraineeService traineeService;
-
-    private MockMvc mockMvc;
-
     @BeforeEach
     void setUp() {
-        reset(authenticationService, traineeService);
-        mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
         when(authenticationService.authenticateAndLoad(JOHN)).thenReturn(new AuthenticatedUser(JOHN, Role.TRAINEE, true));
     }
 

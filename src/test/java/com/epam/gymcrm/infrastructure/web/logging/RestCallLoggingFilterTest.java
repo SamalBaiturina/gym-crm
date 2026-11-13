@@ -45,7 +45,24 @@ class RestCallLoggingFilterTest {
     }
 
     @Test
-    void successfulCallIsLoggedAtInfoWithoutPasswords() throws Exception {
+    void maskHidesAPasswordThatWasCutOff() {
+        assertEquals("{\"password\":\"***\"", RestCallLoggingFilter.mask("{\"password\":\"abc"));
+        assertEquals("{\"password\":\"***\"", RestCallLoggingFilter.mask("{\"password\":\"ab\\"));
+    }
+
+    @Test
+    void applicationStillReadsTheWholeBodyWhenItIsLargerThanTheCacheLimit() throws Exception {
+        String body = "{\"data\":\"" + "x".repeat(20_000) + "\"}";
+        FilterChain readsEverything = (req, res) ->
+                res.getWriter().write(String.valueOf(req.getInputStream().readAllBytes().length));
+
+        filter.doFilter(request("POST", "/x", body), response, readsEverything);
+
+        assertEquals(String.valueOf(body.length()), response.getContentAsString());
+    }
+
+    @Test
+    void successfulCallIsLoggedAtInfoWithoutBodies() throws Exception {
         try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
             filter.doFilter(request("POST", "/trainees", "{\"firstName\":\"John\"}"), response,
                     application(200, "{\"username\":\"John.Smith\",\"password\":\"secret12345\"}"));
@@ -53,7 +70,22 @@ class RestCallLoggingFilterTest {
             List<String> lines = logs.messages(Level.INFO);
             assertEquals(1, lines.size());
             String line = lines.get(0);
-            assertTrue(line.contains("POST /trainees -> 200"));
+            assertTrue(line.matches("POST /trainees -> 200 \\(\\d+ ms\\)"));
+            assertFalse(line.contains("John"));
+            assertFalse(line.contains("secret12345"));
+        }
+    }
+
+    @Test
+    void bodiesAreLoggedAtDebugWithoutPasswords() throws Exception {
+        try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
+            filter.doFilter(request("POST", "/trainees", "{\"firstName\":\"John\"}"), response,
+                    application(200, "{\"username\":\"John.Smith\",\"password\":\"secret12345\"}"));
+
+            List<String> lines = logs.messages(Level.DEBUG);
+            assertEquals(1, lines.size());
+            String line = lines.get(0);
+            assertTrue(line.contains("POST /trainees"));
             assertTrue(line.contains("request={\"firstName\":\"John\"}"));
             assertTrue(line.contains("\"password\":\"***\""));
             assertFalse(line.contains("secret12345"));
@@ -77,8 +109,11 @@ class RestCallLoggingFilterTest {
             List<String> lines = logs.messages(Level.WARN);
             assertEquals(1, lines.size());
             assertTrue(lines.get(0).contains("GET /login -> 401"));
-            assertTrue(lines.get(0).contains("Invalid username or password"));
-            assertTrue(lines.get(0).contains("request=-"));
+            assertFalse(lines.get(0).contains("Invalid username or password"));
+            List<String> details = logs.messages(Level.DEBUG);
+            assertEquals(1, details.size());
+            assertTrue(details.get(0).contains("Invalid username or password"));
+            assertTrue(details.get(0).contains("request=-"));
         }
     }
 
@@ -98,8 +133,10 @@ class RestCallLoggingFilterTest {
         try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
             filter.doFilter(request, response, application(200, "[]"));
 
-            assertTrue(logs.messages(Level.INFO).get(0)
-                    .contains("GET /trainees/John.Smith/trainings?periodFrom=2026-01-01 -> 200"));
+            assertEquals("GET /trainees/John.Smith/trainings -> 200",
+                    logs.messages(Level.INFO).get(0).replaceAll(" \\(\\d+ ms\\)$", ""));
+            assertTrue(logs.messages(Level.DEBUG).get(0)
+                    .contains("GET /trainees/John.Smith/trainings?periodFrom=2026-01-01"));
         }
     }
 
@@ -108,9 +145,21 @@ class RestCallLoggingFilterTest {
         try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
             filter.doFilter(request("GET", "/x", ""), response, application(200, "x".repeat(5000)));
 
-            String line = logs.messages(Level.INFO).get(0);
+            String line = logs.messages(Level.DEBUG).get(0);
             assertTrue(line.contains("...(truncated)"));
             assertTrue(line.length() < 1300);
         }
+    }
+
+    @Test
+    void actuatorCallsAreNotLogged() throws Exception {
+        try (LogCapture logs = new LogCapture(RestCallLoggingFilter.class)) {
+            filter.doFilter(request("GET", "/actuator/health", ""), response,
+                    application(200, "{\"status\":\"UP\"}"));
+
+            assertTrue(logs.messages(Level.INFO).isEmpty());
+            assertTrue(logs.messages(Level.DEBUG).isEmpty());
+        }
+        assertEquals("{\"status\":\"UP\"}", response.getContentAsString());
     }
 }

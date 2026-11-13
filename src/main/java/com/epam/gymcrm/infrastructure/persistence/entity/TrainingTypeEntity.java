@@ -8,6 +8,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
+/**
+ * JPA entity of the table {@code training_type}. The rows are constants filled by the schema script,
+ * so the entity is read-only.
+ */
 @Entity
 @Immutable
 @Table(name = "training_type")

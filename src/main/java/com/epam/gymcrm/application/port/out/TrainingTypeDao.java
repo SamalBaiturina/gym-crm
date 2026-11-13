@@ -11,4 +11,7 @@ public interface TrainingTypeDao {
     List<TrainingType> findAll();
 
     Optional<TrainingType> findById(Long id);
+
+    /** The number of training types, counted by the database without loading the rows. */
+    long count();
 }

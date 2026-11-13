@@ -2,6 +2,7 @@ package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
@@ -30,6 +31,8 @@ class AuthenticationServiceRoleTest {
     private TraineeDao traineeDao;
     @Mock
     private TrainerDao trainerDao;
+    @Mock
+    private UsageMetrics usageMetrics;
     @InjectMocks
     private AuthenticationService service;
 

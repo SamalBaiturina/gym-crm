@@ -34,6 +34,13 @@ class TrainingTypeServiceTest {
     }
 
     @Test
+    void countAsksTheDao() {
+        when(trainingTypeDao.count()).thenReturn(5L);
+
+        assertEquals(5L, service.count());
+    }
+
+    @Test
     void requireByIdReturnsTheType() {
         TrainingType yoga = new TrainingType(2L, "YOGA");
         when(trainingTypeDao.findById(2L)).thenReturn(Optional.of(yoga));

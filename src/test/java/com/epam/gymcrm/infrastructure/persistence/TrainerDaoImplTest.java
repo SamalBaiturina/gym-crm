@@ -1,7 +1,5 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.TrainingType;
@@ -20,9 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrainerDaoImplTest extends JpaTestBase {
-
-    private final TrainerDao trainerDao = bean(TrainerDao.class);
-    private final TraineeDao traineeDao = bean(TraineeDao.class);
 
     @Test
     void save_assignsIdAndStoresSpecialization() {

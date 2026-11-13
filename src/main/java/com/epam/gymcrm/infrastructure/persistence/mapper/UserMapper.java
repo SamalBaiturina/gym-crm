@@ -4,6 +4,7 @@ import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.persistence.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
+/** Converts between the {@link UserEntity} and the domain {@code User}. */
 @Component
 public class UserMapper {
 
