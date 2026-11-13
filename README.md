@@ -63,15 +63,16 @@ settings in `src/main/resources` (`application-local.yml`, `application-dev.yml`
 | Profile | Database | Host | User | Password | Connection pool |
 |---------|----------|------|------|----------|-----------------|
 | `local` | `gymcrm` | `localhost` | `postgres` | `DB_PASSWORD`, default `postgres` | 5 |
-| `dev` | `gymcrm_dev` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, default `postgres` | 5 |
+| `dev` | `gymcrm_dev` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 5 |
 | `stg` | `gymcrm_stg` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 10 |
 | `prod` | `gymcrm_prod` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 20 |
 
 Create the database of the environment and run the schema script against it (see Database).
-Passwords are read from environment variables and are never committed. `stg` and `prod` have no default password:
-set `DB_PASSWORD`, otherwise the database rejects the connection and the application does not start.
+Passwords are read from environment variables and are never committed. Only `local` has a default password;
+`dev`, `stg` and `prod` have none: set `DB_PASSWORD`, otherwise the database rejects the connection and the application
+does not start, so a misconfigured deployment fails at once.
 
-Select a profile in one of three ways:
+Select a profile in one of three ways (set `DB_PASSWORD` first for `dev`, `stg` and `prod`):
 
 ```
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
@@ -213,11 +214,11 @@ The controllers are annotated with Swagger (OpenAPI) annotations: a tag per cont
 ## Logging
 
 - Every request gets a transaction id. It is taken from the `X-Transaction-Id` header if the caller sent a valid one (up to 64 characters: letters, digits, `.`, `_`, `-`), otherwise a UUID is generated. The id is written in every log line of the request (the square brackets in the log pattern) and is returned in the `X-Transaction-Id` response header.
-- Every REST call is logged in one line: method and URL with query, status, time, request body and response body (the error message for a failed call).
-  The level depends on the status: INFO below 400, WARN for 4xx, ERROR for 5xx.
+- Every REST call is logged in one line: method, path, status and time. The level depends on the status: INFO below 400, WARN for 4xx, ERROR for 5xx.
+- The query string and the request and response bodies (the error message for a failed call) can hold personal data, so they are logged in a second line at DEBUG only. Production logs at INFO do not contain them.
 - Passwords (`password`, `newPassword`) are masked as `***`, headers are never logged (so `Authorization` is never in the log), long bodies are cut after 1000 characters.
-  A request rejected before its body was read (for example 401) is logged without a body.
-- The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on only in tests (`src/test/resources/logback-test.xml`).
+  A request rejected before its body was read (for example 401) has no body in the DEBUG line.
+- The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on in tests (`src/test/resources/logback-test.xml`) and can be switched on for a run with `--logging.level.com.epam.gymcrm=DEBUG`.
 - Failures in the services and DAOs (validation, authentication, entity not found) are logged as WARN with the username or id before the exception is thrown.
 - Calls to `/actuator/**` are not logged: health checks and metric scrapes come every few seconds.
 

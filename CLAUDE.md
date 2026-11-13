@@ -28,7 +28,7 @@ This file is the technical context for AI assistants. Setup instructions and the
 - `local` is the default profile. Select another one with `--spring.profiles.active=<name>` or `SPRING_PROFILES_ACTIVE`
   (with Maven: `-Dspring-boot.run.profiles=<name>`).
 - Every environment has its own database (`gymcrm`, `gymcrm_dev`, `gymcrm_stg`, `gymcrm_prod`) and its own connection pool size.
-  Passwords and hosts come from environment variables (`DB_PASSWORD`, `DB_HOST`, `DB_USER`); `stg` and `prod` require `DB_PASSWORD`.
+  Passwords and hosts come from environment variables (`DB_PASSWORD`, `DB_HOST`, `DB_USER`); only `local` has a default password, `dev`, `stg` and `prod` require `DB_PASSWORD`.
 - Actuator exposes only `health`, `info` and `prometheus` (`management.endpoints.web.exposure.include`).
   The Actuator endpoints are outside `BasicAuthInterceptor`, so they need no credentials.
 - Custom metrics: services call the `UsageMetrics` port (`registrationCompleted(role)`, `trainingAdded()`, `authenticationFailed()`),
@@ -59,7 +59,7 @@ Rules:
 ## Request flow and security
 
 1. `TransactionIdFilter` puts a `transactionId` into the logging context (MDC) and returns it in a response header.
-2. `RestCallLoggingFilter` logs the request and the response (level by status, passwords masked). It skips `/actuator` calls.
+2. `RestCallLoggingFilter` logs method, path, status and time (level by status); bodies only at DEBUG, passwords masked. It skips `/actuator` calls.
    Both filters are `@Component` beans; `@Order` keeps this sequence.
 3. `BasicAuthInterceptor` authenticates the caller once through `AuthenticationService.authenticateAndLoad`,
    then checks the active flag and the `{username}` path variable, and stores an `AuthenticatedUser`
@@ -101,8 +101,9 @@ Spring's own errors (405, 415 and so on) go through the same handler.
 - SLF4J with Logback. The pattern includes `[%X{transactionId:-}]`.
 - INFO for business events, WARN for rejected operations (failed authentication, validation, forbidden),
   ERROR for unexpected failures, DEBUG for details.
-- Never log passwords, tokens or the `Authorization` header. Request and response bodies are logged with
-  `password` and `newPassword` masked.
+- Never log passwords, tokens or the `Authorization` header. Request and response bodies and the query string
+  can hold personal data: they are logged at DEBUG only (INFO has method, path, status and time),
+  with `password` and `newPassword` masked.
 
 ## Testing
 

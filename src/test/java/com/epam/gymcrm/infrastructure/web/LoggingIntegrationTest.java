@@ -59,8 +59,11 @@ class LoggingIntegrationTest extends ControllerTestBase {
             List<String> lines = logs.messages(Level.INFO);
             assertEquals(1, lines.size());
             assertTrue(lines.get(0).contains("POST /trainees -> 200"));
-            assertTrue(lines.get(0).contains("\"password\":\"***\""));
-            assertFalse(lines.get(0).contains("secret12345"));
+            assertFalse(lines.get(0).contains("John"));
+            List<String> details = logs.messages(Level.DEBUG);
+            assertEquals(1, details.size());
+            assertTrue(details.get(0).contains("\"password\":\"***\""));
+            assertFalse(details.get(0).contains("secret12345"));
         }
     }
 
@@ -72,7 +75,7 @@ class LoggingIntegrationTest extends ControllerTestBase {
             List<String> lines = logs.messages(Level.WARN);
             assertEquals(1, lines.size());
             assertTrue(lines.get(0).contains("GET /login -> 401"));
-            assertTrue(lines.get(0).contains("UNAUTHORIZED"));
+            assertTrue(logs.messages(Level.DEBUG).get(0).contains("UNAUTHORIZED"));
         }
     }
 }
