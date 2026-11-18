@@ -39,6 +39,11 @@ public class TrainingTypeDaoImpl implements TrainingTypeDao {
     }
 
     @Override
+    public long count() {
+        return entityManager.createQuery("select count(t) from TrainingTypeEntity t", Long.class).getSingleResult();
+    }
+
+    @Override
     public Optional<TrainingType> findById(Long id) {
         return Optional.ofNullable(entityManager.find(TrainingTypeEntity.class, id))
                 .map(mapper::toDomain);

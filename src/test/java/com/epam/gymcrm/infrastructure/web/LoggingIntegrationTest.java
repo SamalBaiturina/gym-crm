@@ -1,27 +1,14 @@
 package com.epam.gymcrm.infrastructure.web;
 
 import ch.qos.logback.classic.Level;
-import com.epam.gymcrm.application.service.TraineeService;
+import com.epam.gymcrm.application.service.RegisterTrainee;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.User;
 import com.epam.gymcrm.infrastructure.web.logging.RestCallLoggingFilter;
 import com.epam.gymcrm.infrastructure.web.logging.TransactionIdFilter;
 import com.epam.gymcrm.support.LogCapture;
-import com.epam.gymcrm.application.service.RegisterTrainee;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
 import java.util.List;
 
@@ -29,41 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** The two filters together with the real controllers and the error handler. */
-@ExtendWith(SpringExtension.class)
-@WebAppConfiguration
-@ContextConfiguration(classes = {WebConfig.class, LoggingIntegrationTest.MocksConfig.class})
-class LoggingIntegrationTest {
-
-    @Configuration
-    static class MocksConfig {
-        @Bean
-        static BeanFactoryPostProcessor serviceMocks() {
-            return ServiceMocks.forWebLayer();
-        }
-    }
-
-    @Autowired
-    private WebApplicationContext webContext;
-    @Autowired
-    private TraineeService traineeService;
-
-    private MockMvc mockMvc;
-
-    @BeforeEach
-    void setUp() {
-        reset(traineeService);
-        mockMvc = MockMvcBuilders.webAppContextSetup(webContext)
-                .addFilters(new TransactionIdFilter(), new RestCallLoggingFilter())
-                .build();
-    }
+/**
+ * The two logging filters together with the real controllers, the interceptor and the error handler;
+ * the services are mocks. {@code @WebMvcTest} adds the filters from their beans, so the test does not add them by hand.
+ */
+class LoggingIntegrationTest extends ControllerTestBase {
 
     @Test
     void everyResponseCarriesATransactionId() throws Exception {
@@ -96,8 +59,11 @@ class LoggingIntegrationTest {
             List<String> lines = logs.messages(Level.INFO);
             assertEquals(1, lines.size());
             assertTrue(lines.get(0).contains("POST /trainees -> 200"));
-            assertTrue(lines.get(0).contains("\"password\":\"***\""));
-            assertFalse(lines.get(0).contains("secret12345"));
+            assertFalse(lines.get(0).contains("John"));
+            List<String> details = logs.messages(Level.DEBUG);
+            assertEquals(1, details.size());
+            assertTrue(details.get(0).contains("\"password\":\"***\""));
+            assertFalse(details.get(0).contains("secret12345"));
         }
     }
 
@@ -109,7 +75,7 @@ class LoggingIntegrationTest {
             List<String> lines = logs.messages(Level.WARN);
             assertEquals(1, lines.size());
             assertTrue(lines.get(0).contains("GET /login -> 401"));
-            assertTrue(lines.get(0).contains("UNAUTHORIZED"));
+            assertTrue(logs.messages(Level.DEBUG).get(0).contains("UNAUTHORIZED"));
         }
     }
 }

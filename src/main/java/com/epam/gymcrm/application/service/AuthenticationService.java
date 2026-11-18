@@ -3,12 +3,11 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.ProfileDao;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
-import com.epam.gymcrm.domain.model.Trainee;
-import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.domain.model.UserProfile;
-import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +27,7 @@ public class AuthenticationService {
 
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
+    private UsageMetrics usageMetrics;
 
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
@@ -39,28 +39,9 @@ public class AuthenticationService {
         this.trainerDao = trainerDao;
     }
 
-    /** True if the username and password belong to a trainee. */
-    @Transactional(readOnly = true)
-    public boolean matchesTrainee(Credentials credentials) {
-        return find(traineeDao, credentials).isPresent();
-    }
-
-    /** True if the username and password belong to a trainer. */
-    @Transactional(readOnly = true)
-    public boolean matchesTrainer(Credentials credentials) {
-        return find(trainerDao, credentials).isPresent();
-    }
-
-    /** Returns the trainee if the credentials are valid; unknown username and wrong password look the same. */
-    @Transactional(readOnly = true)
-    public Trainee authenticateTrainee(Credentials credentials) {
-        return authenticate(traineeDao, "Trainee", credentials);
-    }
-
-    /** Returns the trainer if the credentials are valid; unknown username and wrong password look the same. */
-    @Transactional(readOnly = true)
-    public Trainer authenticateTrainer(Credentials credentials) {
-        return authenticate(trainerDao, "Trainer", credentials);
+    @Autowired
+    public void setUsageMetrics(UsageMetrics usageMetrics) {
+        this.usageMetrics = usageMetrics;
     }
 
     /**
@@ -77,6 +58,7 @@ public class AuthenticationService {
                         .map(trainer -> new AuthenticatedUser(credentials, Role.TRAINER, trainer.user().isActive())))
                 .orElseThrow(() -> {
                     log.warn("Authentication failed for username={}", credentials.username());
+                    usageMetrics.authenticationFailed();
                     return new AuthenticationException();
                 });
     }
@@ -84,12 +66,5 @@ public class AuthenticationService {
     private <T extends UserProfile<T>> Optional<T> find(ProfileDao<T> dao, Credentials credentials) {
         return dao.findByUsername(credentials.username())
                 .filter(profile -> profile.user().passwordMatches(credentials.password()));
-    }
-
-    private <T extends UserProfile<T>> T authenticate(ProfileDao<T> dao, String role, Credentials credentials) {
-        return find(dao, credentials).orElseThrow(() -> {
-            log.warn("{} authentication failed for username={}", role, credentials.username());
-            return new AuthenticationException();
-        });
     }
 }

@@ -1,7 +1,5 @@
 package com.epam.gymcrm.infrastructure.persistence;
 
-import com.epam.gymcrm.application.port.out.TraineeDao;
-import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.domain.model.Trainer;
 import com.epam.gymcrm.support.JpaTestBase;
@@ -16,9 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssignedFindersTest extends JpaTestBase {
-
-    private final TraineeDao traineeDao = bean(TraineeDao.class);
-    private final TrainerDao trainerDao = bean(TrainerDao.class);
 
     @Test
     void findsTheTrainersAssignedToATrainee() {

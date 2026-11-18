@@ -1,6 +1,7 @@
 package com.epam.gymcrm.application.service;
 
 import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.exception.ValidationException;
@@ -44,6 +45,8 @@ class TrainerServiceTest {
     private PasswordGenerator passwordGenerator;
     @Mock
     private TrainingTypeService trainingTypeService;
+    @Mock
+    private UsageMetrics usageMetrics;
     @InjectMocks
     private TrainerService service;
 

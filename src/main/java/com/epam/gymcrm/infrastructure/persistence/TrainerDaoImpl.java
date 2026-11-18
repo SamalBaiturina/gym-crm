@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Hibernate DAO of the trainers. The logic shared with the trainees is in {@link AbstractProfileDao};
+ * this class adds finding trainers by usernames and the trainers that are not assigned to a trainee yet.
+ */
 @Repository
 public class TrainerDaoImpl extends AbstractProfileDao<TrainerEntity, Trainer> implements TrainerDao {
 

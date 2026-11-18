@@ -1,44 +1,65 @@
 package com.epam.gymcrm.support;
 
+import com.epam.gymcrm.application.port.out.TraineeDao;
+import com.epam.gymcrm.application.port.out.TrainerDao;
+import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.application.port.out.TrainingTypeDao;
+import com.epam.gymcrm.infrastructure.persistence.TraineeDaoImpl;
+import com.epam.gymcrm.infrastructure.persistence.TrainerDaoImpl;
+import com.epam.gymcrm.infrastructure.persistence.TrainingDaoImpl;
+import com.epam.gymcrm.infrastructure.persistence.TrainingTypeDaoImpl;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TraineeMapper;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainerMapper;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainingMapper;
+import com.epam.gymcrm.infrastructure.persistence.mapper.TrainingTypeMapper;
+import com.epam.gymcrm.infrastructure.persistence.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.core.env.MapPropertySource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Base class for DAO integration tests. One Spring context with H2 is shared by all tests;
- * the tables are emptied before every test.
+ * Base class for DAO integration tests. {@code @DataJpaTest} starts only the JPA part of the application
+ * on in-memory H2; the context is shared by all test classes. The tests commit their own transactions
+ * through {@link #tx}, so the transaction that Spring would wrap around each test is switched off
+ * and the tables are emptied before every test instead.
  */
+@DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@Import({TraineeDaoImpl.class, TrainerDaoImpl.class, TrainingDaoImpl.class, TrainingTypeDaoImpl.class,
+        TraineeMapper.class, TrainerMapper.class, TrainingMapper.class, TrainingTypeMapper.class,
+        UserMapper.class})
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
 public abstract class JpaTestBase {
 
-    private static final AnnotationConfigApplicationContext CONTEXT = createContext();
+    @Autowired
+    protected TraineeDao traineeDao;
+    @Autowired
+    protected TrainerDao trainerDao;
+    @Autowired
+    protected TrainingDao trainingDao;
+    @Autowired
+    protected TrainingTypeDao trainingTypeDao;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+    @Autowired
+    private DataSource dataSource;
 
     protected TransactionTemplate tx;
     protected JdbcTemplate jdbc;
 
-    private static AnnotationConfigApplicationContext createContext() {
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-        context.getEnvironment().getPropertySources()
-                .addFirst(new MapPropertySource("test", Map.of("hibernate.hbm2ddl.auto", "create-drop")));
-        context.register(TestDbConfig.class);
-        context.refresh();
-        return context;
-    }
-
-    protected static <T> T bean(Class<T> type) {
-        return CONTEXT.getBean(type);
-    }
-
     @BeforeEach
     protected void cleanDatabase() {
-        tx = new TransactionTemplate(CONTEXT.getBean(PlatformTransactionManager.class));
-        jdbc = new JdbcTemplate(CONTEXT.getBean(DataSource.class));
+        tx = new TransactionTemplate(transactionManager);
+        jdbc = new JdbcTemplate(dataSource);
         for (String table : List.of("training", "trainee_trainer", "trainee", "trainer", "users", "training_type")) {
             jdbc.execute("delete from " + table);
         }

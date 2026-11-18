@@ -3,6 +3,7 @@ package com.epam.gymcrm.application.service;
 import com.epam.gymcrm.application.port.out.TraineeDao;
 import com.epam.gymcrm.application.port.out.TrainerDao;
 import com.epam.gymcrm.application.port.out.TrainingDao;
+import com.epam.gymcrm.application.port.out.UsageMetrics;
 import com.epam.gymcrm.domain.exception.ForbiddenOperationException;
 import com.epam.gymcrm.domain.exception.NotFoundException;
 import com.epam.gymcrm.domain.model.AuthenticatedUser;
@@ -29,6 +30,7 @@ public class TrainingService {
     private TrainingDao trainingDao;
     private TraineeDao traineeDao;
     private TrainerDao trainerDao;
+    private UsageMetrics usageMetrics;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
@@ -45,10 +47,15 @@ public class TrainingService {
         this.trainerDao = trainerDao;
     }
 
+    @Autowired
+    public void setUsageMetrics(UsageMetrics usageMetrics) {
+        this.usageMetrics = usageMetrics;
+    }
+
     /**
      * Adds a training between the trainee and the trainer found by username. The training type is
      * the trainer's specialization. The caller must be the trainee or the trainer of the training.
-     * The caller has already proved who he is (the web layer or the facade authenticates him),
+     * The caller has already proved who he is (the web layer authenticates him),
      * so no password is passed here.
      *
      * @throws ForbiddenOperationException if the caller is neither the trainee nor the trainer
@@ -75,6 +82,7 @@ public class TrainingService {
                 trainer.specialization(), command.date(), command.duration()));
         log.info("Added training id={}, trainer={}, trainee={}",
                 saved.id(), command.trainerUsername(), command.traineeUsername());
+        usageMetrics.trainingAdded();
         return saved;
     }
 

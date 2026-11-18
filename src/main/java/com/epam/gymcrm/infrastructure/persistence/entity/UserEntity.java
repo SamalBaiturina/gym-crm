@@ -7,6 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * JPA entity of the table {@code users}: names, username, password and the active flag.
+ * Every trainee and every trainer has exactly one.
+ */
 @Entity
 @Table(name = "users")
 public class UserEntity {

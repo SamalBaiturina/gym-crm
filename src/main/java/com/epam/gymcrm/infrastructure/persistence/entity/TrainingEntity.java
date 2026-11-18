@@ -12,6 +12,10 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDate;
 
+/**
+ * JPA entity of the table {@code training}: one training between a trainee and a trainer.
+ * The trainee and the trainer are loaded lazily.
+ */
 @Entity
 @Table(name = "training")
 public class TrainingEntity {

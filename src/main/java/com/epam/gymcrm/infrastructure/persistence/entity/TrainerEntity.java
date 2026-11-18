@@ -14,6 +14,10 @@ import jakarta.persistence.Table;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * JPA entity of the table {@code trainer}. It keeps the specialization, the {@link UserEntity} and,
+ * as the inverse side of the assignment, the trainees of the trainer.
+ */
 @Entity
 @Table(name = "trainer")
 public class TrainerEntity {

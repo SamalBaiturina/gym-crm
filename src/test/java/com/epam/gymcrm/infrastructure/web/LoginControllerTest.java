@@ -1,35 +1,19 @@
 package com.epam.gymcrm.infrastructure.web;
 
 import com.epam.gymcrm.application.service.AuthenticationException;
-import com.epam.gymcrm.application.service.AuthenticationService;
-import com.epam.gymcrm.application.service.TraineeService;
-import com.epam.gymcrm.application.service.TrainerService;
+import com.epam.gymcrm.domain.model.AuthenticatedUser;
 import com.epam.gymcrm.domain.model.Credentials;
 import com.epam.gymcrm.domain.model.Role;
-import com.epam.gymcrm.domain.model.AuthenticatedUser;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.stream.Stream;
 
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,38 +23,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(SpringExtension.class)
-@WebAppConfiguration
-@ContextConfiguration(classes = {WebConfig.class, LoginControllerTest.MocksConfig.class})
-class LoginControllerTest {
-
-    @Configuration
-    static class MocksConfig {
-        @Bean
-        static BeanFactoryPostProcessor serviceMocks() {
-            return ServiceMocks.forWebLayer();
-        }
-    }
+class LoginControllerTest extends ControllerTestBase {
 
     private static final Credentials JOHN = new Credentials("John.Smith", "secret12345");
     private static final String JOHN_HEADER = basic("John.Smith", "secret12345");
-
-    @Autowired
-    private WebApplicationContext webContext;
-    @Autowired
-    private AuthenticationService authenticationService;
-    @Autowired
-    private TraineeService traineeService;
-    @Autowired
-    private TrainerService trainerService;
-
-    private MockMvc mockMvc;
-
-    @BeforeEach
-    void setUp() {
-        reset(authenticationService, traineeService, trainerService);
-        mockMvc = MockMvcBuilders.webAppContextSetup(webContext).build();
-    }
 
     private static String basic(String username, String password) {
         return "Basic " + encode(username + ":" + password);

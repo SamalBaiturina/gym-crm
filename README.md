@@ -1,29 +1,28 @@
 # Gym CRM System
 
-Gym CRM built with Spring MVC and Hibernate (JPA) on PostgreSQL.
-Manages trainees, trainers and trainings. The application is available as a REST API (embedded Tomcat) and as a console demo.
+Gym CRM built with Spring Boot and Hibernate (JPA) on PostgreSQL.
+Manages trainees, trainers and trainings through a REST API.
 
 ## Tech stack
 
 - Java 21, Maven
-- Spring Framework 6.1 (Core, ORM, transactions, MVC), no Spring Boot yet
-- Embedded Tomcat 10.1, Jackson (JSON), Hibernate Validator (request validation)
-- Hibernate 6.5 with PostgreSQL, HikariCP connection pool
+- Spring Boot 3.5 (Spring Framework 6.2): web (MVC, embedded Tomcat), data JPA, validation, Actuator
+- Jackson (JSON), Hibernate Validator (request validation)
+- Hibernate with PostgreSQL, HikariCP connection pool
 - SLF4J + Logback, JUnit 5, Mockito, Spring MockMvc, H2 (tests only), JaCoCo
-- Swagger (OpenAPI) annotations on the controllers; the Swagger UI will come with the Spring Boot migration
+- Swagger (OpenAPI) annotations on the controllers
 
 ## Architecture
 
 Hexagonal (onion) layout, dependencies point towards the domain model:
 
 - `domain.model` - records (`Trainee`, `Trainer`, `Training`, `TrainingType`, `User`), value objects (`Credentials`, `PasswordChange`, training search criteria), read models (`TraineeProfile`, `TrainerProfile`) and the `UserProfile` interface shared by trainee and trainer
-- `domain.exception` - `ValidationException` (400), `NotFoundException` (404)
-- `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs)
-- `application.service` - business logic, authentication, validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
+- `domain.exception` - `ValidationException` (400), `NotFoundException` (404), `ForbiddenOperationException` (403)
+- `application.port.out` - DAO interfaces (`ProfileDao` is the part common to the trainee and trainer DAOs) and `UsageMetrics`, the port through which the services report business events to be counted
+- `application.service` - business logic, authentication (`AuthenticationException`, 401), validation, transactions (`@Transactional`); `AbstractProfileService` holds the account logic shared by trainees and trainers
 - `infrastructure.persistence` - Hibernate DAOs (`AbstractProfileDao` is their common base), JPA entities (`entity` package) and one mapper per entity (`mapper` package)
-- `infrastructure.config` - Spring configuration of the services and persistence (data source, Hibernate, transactions)
-- `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters)
-- `infrastructure.facade` - `GymFacade`, a single entry point for the 18 operations of the console demo
+- `infrastructure.monitoring` - the custom Actuator health indicators and the Micrometer implementation of `UsageMetrics`
+- `infrastructure.web` - the REST layer: `WebConfig`, `controller`, `dto`, `security` (Basic auth interceptor), `error` (global exception handler), `logging` (servlet filters, registered as Spring beans)
 
 JPA entities are separate classes in the infrastructure layer, so the domain model stays free of persistence annotations.
 Ports that change data (`delete`, `updateTrainers`, saving a `Training`) take domain objects instead of ids, so a row loaded by a service is not loaded again by the DAO.
@@ -38,26 +37,80 @@ CREATE DATABASE gymcrm;
 ```
 
 then execute `src/main/resources/db/schema.sql` against `gymcrm`.
+The other environments use their own databases (`gymcrm_dev`, `gymcrm_stg`, `gymcrm_prod`), see [Environments](#environments).
 The script creates the tables and fills the constant `training_type` table
 (`1 FITNESS`, `2 YOGA`, `3 ZUMBA`, `4 STRETCHING`, `5 RESISTANCE`).
 
-Connection settings are in `src/main/resources/application.properties`.
-The password is read from the `DB_PASSWORD` environment variable (default `postgres`) and is never committed.
-Hibernate runs with `hbm2ddl.auto=validate`: it checks the schema but does not change it.
+Connection settings depend on the environment, see [Environments](#environments).
+Hibernate runs with `ddl-auto: validate`: it checks the schema but does not change it.
 
 ## Run
 
-REST API:
-
 ```
 export DB_PASSWORD=your_password
-mvn clean compile
+mvn spring-boot:run
 ```
 
-then run `com.epam.gymcrm.RestApplication` from the IDE. It listens on port 8080 (use `-Dserver.port=9090` to change it).
-Restart it after every code change.
+This starts the `local` profile. The API listens on port 8080 (use `--server.port=9090` to change it).
+An executable jar is built with `mvn clean package` and started with `java -jar target/gym-crm-1.0-SNAPSHOT.jar`.
 
-Console demo: run `com.epam.gymcrm.Main`. It goes through the main operations once using `GymFacade`.
+## Environments
+
+The application has four Spring profiles: `local`, `dev`, `stg` and `prod`. Each one has its own file with the database
+settings in `src/main/resources` (`application-local.yml`, `application-dev.yml`, `application-stg.yml`, `application-prod.yml`);
+`application.yml` holds the settings common to all of them. Without an active profile, `local` is used.
+
+| Profile | Database | Host | User | Password | Connection pool |
+|---------|----------|------|------|----------|-----------------|
+| `local` | `gymcrm` | `localhost` | `postgres` | `DB_PASSWORD`, default `postgres` | 5 |
+| `dev` | `gymcrm_dev` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 5 |
+| `stg` | `gymcrm_stg` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 10 |
+| `prod` | `gymcrm_prod` | `DB_HOST`, default `localhost` | `DB_USER`, default `postgres` | `DB_PASSWORD`, required | 20 |
+
+Create the database of the environment and run the schema script against it (see Database).
+Passwords are read from environment variables and are never committed. Only `local` has a default password;
+`dev`, `stg` and `prod` have none: set `DB_PASSWORD`, otherwise the database rejects the connection and the application
+does not start, so a misconfigured deployment fails at once.
+
+Select a profile in one of three ways (set `DB_PASSWORD` first for `dev`, `stg` and `prod`):
+
+```
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+java -jar target/gym-crm-1.0-SNAPSHOT.jar --spring.profiles.active=dev
+SPRING_PROFILES_ACTIVE=dev java -jar target/gym-crm-1.0-SNAPSHOT.jar
+```
+
+The active profile is written at the start of the log: `The following 1 profile is active: "dev"`.
+
+## Monitoring
+
+Spring Boot Actuator exposes three endpoints on the application port (all other Actuator endpoints are closed):
+
+| Endpoint | What it shows |
+|----------|---------------|
+| `GET /actuator/health` | Overall status and the status of every check |
+| `GET /actuator/info` | Application name and description |
+| `GET /actuator/prometheus` | Metrics in the Prometheus format |
+
+The probes `/actuator/health/liveness` and `/actuator/health/readiness` are available too.
+
+Besides the standard checks (database, disk space), the application has two health indicators of its own:
+
+- `trainingTypes`: `UP` if the training types table is filled (trainers cannot be registered without it), `DOWN` if it is empty or cannot be read. Detail: `count`.
+- `connectionPool`: state of the HikariCP connection pool. `DOWN` when all connections are busy and callers wait for one. Details: `active`, `idle`, `total`, `max`, `waiting`.
+
+The application also counts three business events. They are custom Prometheus metrics (counters) and appear in `/actuator/prometheus`:
+
+| Metric | What it counts |
+|--------|----------------|
+| `gymcrm_registrations_total{role="trainee"}` and `{role="trainer"}` | Created accounts, one series per role |
+| `gymcrm_trainings_added_total` | Trainings saved |
+| `gymcrm_auth_failures_total` | Requests with an unknown username or a wrong password |
+
+A counter starts at 0 when the application starts and grows until the next restart.
+
+The Actuator endpoints do not need the Basic authentication header and are not written to the REST call log.
+In a real deployment they must be closed from outside (a separate management port or a firewall).
 
 ## REST API
 
@@ -157,17 +210,17 @@ Other errors of Spring MVC (wrong method `405`, wrong content type `415`) use th
 ### API documentation
 
 The controllers are annotated with Swagger (OpenAPI) annotations: a tag per controller and a summary, description and possible responses per endpoint.
-The Swagger UI is not enabled yet; it will be added with the Spring Boot migration.
 
 ## Logging
 
 - Every request gets a transaction id. It is taken from the `X-Transaction-Id` header if the caller sent a valid one (up to 64 characters: letters, digits, `.`, `_`, `-`), otherwise a UUID is generated. The id is written in every log line of the request (the square brackets in the log pattern) and is returned in the `X-Transaction-Id` response header.
-- Every REST call is logged in one line: method and URL with query, status, time, request body and response body (the error message for a failed call).
-  The level depends on the status: INFO below 400, WARN for 4xx, ERROR for 5xx.
+- Every REST call is logged in one line: method, path, status and time. The level depends on the status: INFO below 400, WARN for 4xx, ERROR for 5xx.
+- The query string and the request and response bodies (the error message for a failed call) can hold personal data, so they are logged in a second line at DEBUG only. Production logs at INFO do not contain them.
 - Passwords (`password`, `newPassword`) are masked as `***`, headers are never logged (so `Authorization` is never in the log), long bodies are cut after 1000 characters.
-  A request rejected before its body was read (for example 401) is logged without a body.
-- The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on only in tests (`src/test/resources/logback-test.xml`).
+  A request rejected before its body was read (for example 401) has no body in the DEBUG line.
+- The application logs at INFO by default; DEBUG for `com.epam.gymcrm` is switched on in tests (`src/test/resources/logback-test.xml`) and can be switched on for a run with `--logging.level.com.epam.gymcrm=DEBUG`.
 - Failures in the services and DAOs (validation, authentication, entity not found) are logged as WARN with the username or id before the exception is thrown.
+- Calls to `/actuator/**` are not logged: health checks and metric scrapes come every few seconds.
 
 ## Tests
 
@@ -175,34 +228,14 @@ The Swagger UI is not enabled yet; it will be added with the Spring Boot migrati
 mvn clean test
 ```
 
-- Service and facade tests use Mockito mocks.
-- Controller tests use Spring MockMvc with the real controllers, interceptor and exception handler and mocked services.
-- DAO tests are integration tests on in-memory H2 with the same Hibernate configuration.
+- Service tests use Mockito mocks.
+- Controller tests use `@WebMvcTest`: the real controllers, interceptor, filters and exception handler with mocked services.
+- DAO tests use `@DataJpaTest` on in-memory H2.
 - `QueryCountTest` uses Hibernate statistics to check that the training lists run one query each (no N+1)
   and that saving a training or changing trainers does not load the trainee and trainers again.
 - `ServiceLoggingTest` checks that failures are logged as warnings with the username; the logging filters have their own tests.
 - `ApiDocumentationTest` checks that every controller and endpoint has its OpenAPI description.
+- `EnvironmentProfilesTest` checks that every profile points to its own database.
+- The health indicators are unit tested with Mockito; `MicrometerUsageMetricsTest` checks the counters on an in-memory registry and `UsageMetricsReportingTest` checks that the services report the events (and only successful ones).
+- `mvn clean verify` runs the tests and fails if line coverage drops below 80%.
 - JaCoCo report: `target/site/jacoco/index.html`.
-
-## Console demo operations
-
-`GymFacade` keeps the 18 service operations in one place; `Main` runs them as a demo. The REST API covers the same functions.
-
-1. Create trainer profile
-2. Create trainee profile
-3. Trainee username/password matching
-4. Trainer username/password matching
-5. Select trainer profile by username
-6. Select trainee profile by username
-7. Trainee password change
-8. Trainer password change
-9. Update trainer profile
-10. Update trainee profile
-11. Activate/de-activate trainee
-12. Activate/de-activate trainer
-13. Delete trainee profile by username (trainings are deleted by cascade)
-14. Get trainee trainings list by criteria (from date, to date, trainer name, training type)
-15. Get trainer trainings list by criteria (from date, to date, trainee name)
-16. Add training
-17. Get trainers not assigned to a trainee
-18. Update trainee's trainers list

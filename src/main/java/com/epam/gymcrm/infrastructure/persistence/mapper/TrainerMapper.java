@@ -5,6 +5,10 @@ import com.epam.gymcrm.infrastructure.persistence.entity.TrainerEntity;
 import com.epam.gymcrm.infrastructure.persistence.entity.TrainingTypeEntity;
 import org.springframework.stereotype.Component;
 
+/**
+ * Converts between the {@link TrainerEntity} and the domain {@code Trainer}.
+ * The specialization entity is passed in, because the mapper does not query the database.
+ */
 @Component
 public class TrainerMapper {
 

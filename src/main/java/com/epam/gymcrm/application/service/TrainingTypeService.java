@@ -29,6 +29,14 @@ public class TrainingTypeService {
         return trainingTypeDao.findAll();
     }
 
+    /**
+     * The number of training types. It is one count query in the database, so it needs no transaction
+     * and loads no rows; the health check calls it on every scrape.
+     */
+    public long count() {
+        return trainingTypeDao.count();
+    }
+
     /** Resolves a type that a request refers to by id. An unknown id is a mistake in the request (400). */
     @Transactional(readOnly = true)
     public TrainingType requireById(Long id) {

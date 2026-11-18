@@ -4,6 +4,7 @@ import com.epam.gymcrm.domain.model.Trainee;
 import com.epam.gymcrm.infrastructure.persistence.entity.TraineeEntity;
 import org.springframework.stereotype.Component;
 
+/** Converts between the {@link TraineeEntity} and the domain {@code Trainee}. */
 @Component
 public class TraineeMapper {
 
