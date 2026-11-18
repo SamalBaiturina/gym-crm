@@ -54,6 +54,63 @@ mvn spring-boot:run
 This starts the `local` profile. The API listens on port 8080 (use `--server.port=9090` to change it).
 An executable jar is built with `mvn clean package` and started with `java -jar target/gym-crm-1.0-SNAPSHOT.jar`.
 
+## Docker
+
+The application and its PostgreSQL database run in two containers described in `compose.yml`.
+The application uses the `dev` profile and connects to the database by the Compose service name `db`.
+All settings come from environment variables; no credentials are stored in the `Dockerfile`, in the image or in git.
+The image is built in two stages (Maven build, then a JRE image) and the application runs as a non-root user.
+
+Requirements: Docker Desktop (or Docker Engine with the Compose plugin).
+
+### Configure
+
+```
+cp .env.example .env
+```
+
+Open `.env` and set `DB_PASSWORD`. The `.env` file is listed in `.gitignore` and is never committed.
+
+### Build and run
+
+```
+docker compose up -d --build
+```
+
+On the first start PostgreSQL creates the `gymcrm_dev` database and runs `src/main/resources/db/schema.sql`.
+The application starts when the database is healthy, so allow about 40 seconds.
+
+### Verify
+
+```
+docker compose ps
+curl localhost:8080/actuator/health
+curl -X POST localhost:8080/trainees -H "Content-Type: application/json" \
+  -d '{"firstName":"John","lastName":"Smith","dateOfBirth":"2000-01-01","address":"Astana"}'
+```
+
+Both containers must be `healthy` and the health response must contain `"status":"UP"`.
+The registration returns the generated username and password, see [REST API](#rest-api) for the other calls.
+
+### Logs and shell
+
+```
+docker logs gym-crm-app            # add -f to follow
+docker compose logs
+docker exec -it gym-crm-app sh
+```
+
+The application writes its logs to standard output.
+
+### Stop and restart
+
+```
+docker compose stop app            # stop only the application
+docker compose start app           # start it again, it reconnects to the database
+docker compose down                # remove the containers, the data stays in the pgdata volume
+docker compose down -v             # also delete the database data
+```
+
 ## Environments
 
 The application has four Spring profiles: `local`, `dev`, `stg` and `prod`. Each one has its own file with the database
